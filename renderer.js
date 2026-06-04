@@ -257,72 +257,60 @@ function updateScanDot() {
 }
 
 /* ─── PIN Modal ─────────────────────────────────────────── */
+let _countdownTimer = null;
+
+function generatePin() {
+  return Array.from({ length: 6 }, () => Math.floor(Math.random() * 10)).join('');
+}
+
 function openPairModal(deviceIP) {
   const device = state.devices.get(deviceIP);
   if (!device) return;
-  state.pendingPair = { ip: device.ip, port: device.port, name: device.name };
+
+  const pin = generatePin();
+  state.pendingPair = { ip: device.ip, port: device.port, name: device.name, pin };
+
+  for (let i = 0; i < 6; i++) {
+    const el = document.getElementById(`pin${i}`);
+    el.textContent = pin[i];
+    el.classList.remove('error');
+  }
 
   document.getElementById('modal-device-name').textContent = device.name;
-  clearPinInputs();
   document.getElementById('modal-error').style.display = 'none';
-  document.getElementById('pair-btn-text').textContent = 'Connect';
-  document.getElementById('pair-btn-spinner').style.display = 'none';
-  document.getElementById('btn-pair-confirm').disabled = false;
+  document.getElementById('btn-pair-cancel').textContent = 'Cancel';
+  document.getElementById('btn-pair-cancel').onclick = closePairModal;
   document.getElementById('modal-overlay').style.display = 'flex';
 
-  setTimeout(() => document.getElementById('pin0').focus(), 100);
+  _startCountdown(90);
+  startPairing();
 }
 
-function closePairModal() {
-  document.getElementById('modal-overlay').style.display = 'none';
-  state.pendingPair = null;
-  clearPinInputs();
+function _startCountdown(seconds) {
+  clearInterval(_countdownTimer);
+  let remaining = seconds;
+  const label = document.getElementById('pair-btn-text');
+  label.textContent = `Waiting for phone… ${remaining}s`;
+  _countdownTimer = setInterval(() => {
+    remaining--;
+    if (remaining > 0) {
+      label.textContent = `Waiting for phone… ${remaining}s`;
+    } else {
+      clearInterval(_countdownTimer);
+    }
+  }, 1000);
 }
 
-function clearPinInputs() {
-  for (let i = 0; i < 6; i++) {
-    const inp = document.getElementById(`pin${i}`);
-    inp.value = '';
-    inp.classList.remove('filled', 'error');
-  }
-}
-
-function pinInput(index) {
-  const inp = document.getElementById(`pin${index}`);
-  const val = inp.value.replace(/[^0-9]/g, '');
-  inp.value = val;
-  inp.classList.toggle('filled', val.length > 0);
-  inp.classList.remove('error');
-  document.getElementById('modal-error').style.display = 'none';
-
-  if (val && index < 5) document.getElementById(`pin${index + 1}`).focus();
-  if (index === 5 && val) confirmPair();
-}
-
-function pinKeydown(e, index) {
-  if (e.key === 'Backspace' && !document.getElementById(`pin${index}`).value && index > 0) {
-    document.getElementById(`pin${index - 1}`).focus();
-  }
-  if (e.key === 'Enter') confirmPair();
-  if (e.key === 'Escape') closePairModal();
-}
-
-async function confirmPair() {
+async function startPairing() {
   if (!state.pendingPair) return;
+  const { ip, port, pin } = state.pendingPair;
 
-  const digits = Array.from({ length: 6 }, (_, i) => document.getElementById(`pin${i}`).value).join('');
-  if (digits.length < 6) {
-    showPinError('Please enter the full 6-digit PIN');
-    return;
-  }
+  const result = await window.siloAPI.connectDevice({ ip, port, pin });
 
-  // Show loading state
-  document.getElementById('pair-btn-text').textContent = 'Connecting…';
-  document.getElementById('pair-btn-spinner').style.display = 'inline-block';
-  document.getElementById('btn-pair-confirm').disabled = true;
+  clearInterval(_countdownTimer);
 
-  const { ip, port } = state.pendingPair;
-  const result = await window.siloAPI.connectDevice({ ip, port, pin: digits });
+  // Modal may have been closed by Cancel while waiting
+  if (!state.pendingPair) return;
 
   if (result.ok) {
     closePairModal();
@@ -333,14 +321,28 @@ async function confirmPair() {
       updateDeviceCard(dev);
     }
     updateScanDot();
+    toast(`Paired with ${dev?.name ?? ip}`, 'success');
   } else {
-    document.getElementById('pair-btn-text').textContent = 'Connect';
-    document.getElementById('pair-btn-spinner').style.display = 'none';
-    document.getElementById('btn-pair-confirm').disabled = false;
-    showPinError(result.error || 'Connection failed');
-    // Shake PIN inputs
+    document.getElementById('pair-btn-text').textContent = 'Timed out';
+    showPinError(result.error || 'Phone did not respond in time');
     for (let i = 0; i < 6; i++) document.getElementById(`pin${i}`).classList.add('error');
+    // Swap Cancel → Retry
+    const cancelBtn = document.getElementById('btn-pair-cancel');
+    cancelBtn.textContent = 'Retry';
+    cancelBtn.onclick = () => openPairModal(state.pendingPair?.ip ?? ip);
   }
+}
+
+function closePairModal() {
+  clearInterval(_countdownTimer);
+  document.getElementById('modal-overlay').style.display = 'none';
+  document.getElementById('modal-error').style.display = 'none';
+  for (let i = 0; i < 6; i++) {
+    const el = document.getElementById(`pin${i}`);
+    el.textContent = '';
+    el.classList.remove('error');
+  }
+  state.pendingPair = null;
 }
 
 function showPinError(msg) {

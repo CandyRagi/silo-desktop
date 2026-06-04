@@ -565,6 +565,24 @@ html, body {
 }
 .pin-digit.filled { border-color: rgba(99,102,241,0.5); }
 .pin-digit.error  { border-color: var(--red); box-shadow: 0 0 0 2px rgba(239,68,68,0.2); animation: shake 0.3s ease; }
+
+/* Read-only PIN display tile (desktop shows the code) */
+.pin-digit--display {
+  display: flex; align-items: center; justify-content: center;
+  border-color: var(--border-accent);
+  background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(167,139,250,0.06));
+  box-shadow: 0 0 12px rgba(99,102,241,0.18);
+  color: var(--text-primary);
+  cursor: default;
+  user-select: none;
+  letter-spacing: 0.05em;
+}
+
+.modal-waiting {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  font-size: 13px; color: var(--text-secondary);
+  margin-bottom: 16px;
+}
 @keyframes shake {
   0%,100% { transform: translateX(0); }
   25%     { transform: translateX(-4px); }

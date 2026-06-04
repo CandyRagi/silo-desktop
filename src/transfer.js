@@ -80,17 +80,28 @@ class TransferManager extends EventEmitter {
   pairDevice(deviceIP, devicePort, desktopName, pin) {
     return new Promise((resolve, reject) => {
       const sessionId = crypto.randomUUID();
-      const msg = buildPairReq(sessionId, desktopName, pin);
+      const msg = buildPairReq(sessionId, desktopName, pin, PORTS.DESKTOP);
 
-      const timer = setTimeout(() => {
-        this._pendingPairReqs.delete(sessionId);
-        reject(new Error('Pairing timed out — device did not respond'));
-      }, 15000);
-
-      this._pendingPairReqs.set(sessionId, { resolve, reject, timer });
-
+      // Send immediately, then re-send every 5 s so that if the phone
+      // sends PAIR_ACK a few seconds after we first sent PAIR_REQ, we
+      // don't miss the reply window. The phone ignores duplicate PAIR_REQs
+      // once it already has a pending request shown on screen.
       this._send(msg, deviceIP, devicePort);
       console.log(`[Transfer] Pairing request sent to ${deviceIP}:${devicePort} (session ${sessionId})`);
+
+      const retryInterval = setInterval(() => {
+        if (!this._pendingPairReqs.has(sessionId)) { clearInterval(retryInterval); return; }
+        this._send(msg, deviceIP, devicePort);
+        console.log(`[Transfer] Pairing re-send to ${deviceIP}:${devicePort} (session ${sessionId})`);
+      }, 5000);
+
+      const timer = setTimeout(() => {
+        clearInterval(retryInterval);
+        this._pendingPairReqs.delete(sessionId);
+        reject(new Error('Pairing timed out — did you enter the code on the phone?'));
+      }, 90000);  // 90 s — user needs time to read and type the 6-digit code
+
+      this._pendingPairReqs.set(sessionId, { resolve, reject, timer, retryInterval });
     });
   }
 
@@ -226,12 +237,15 @@ class TransferManager extends EventEmitter {
     clearTimeout(pending.timer);
     this._pendingPairReqs.delete(sessionId);
 
-    // Register session
-    const session = { ip: rinfo.address, port: rinfo.port, sessionId, lastPing: Date.now() };
+    // Register session — always use the phone's fixed transfer port, not the ephemeral sender port
+    const session = { ip: rinfo.address, port: PORTS.ANDROID, sessionId, lastPing: Date.now() };
     this.sessions.set(sessionId, session);
 
+    // Clear the re-send interval
+    clearInterval(pending.retryInterval);
+
     console.log(`[Transfer] Paired! Session ${sessionId} with ${rinfo.address}`);
-    this.emit('device-connected', { sessionId, ip: rinfo.address, port: rinfo.port });
+    this.emit('device-connected', { sessionId, ip: rinfo.address, port: PORTS.ANDROID });
     pending.resolve(sessionId);
 
     // Start keepalive
@@ -339,7 +353,8 @@ class TransferManager extends EventEmitter {
     const session = this.sessions.get(parsed.sessionId);
     if (!session) return;
     session.lastPing = Date.now();
-    this._send(buildPong(parsed.sessionId), rinfo.address, rinfo.port);
+    // Always reply to the phone's fixed transfer port (41236), not the ephemeral rinfo.port
+    this._send(buildPong(parsed.sessionId), session.ip, PORTS.ANDROID);
   }
 
   _handlePong(parsed) {
