@@ -49,6 +49,9 @@ function initServices() {
   discovery.on('device-updated', (device) => {
     mainWindow?.webContents.send('device-updated', device);
   });
+  discovery.on('scan-timeout', () => {
+    mainWindow?.webContents.send('scan-timeout');
+  });
 
   // Forward transfer events to renderer
   transferMgr.on('device-connected', (info) => {

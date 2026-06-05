@@ -2,6 +2,30 @@
 // Silo Desktop — Renderer Process
 // ═══════════════════════════════════════════════════════════
 
+/* ─── Persistent Device Store ─────────────────────────────── */
+const SAVED_DEVICES_KEY = 'silo_saved_devices';
+
+function loadSavedDevices() {
+  try { return JSON.parse(localStorage.getItem(SAVED_DEVICES_KEY) || '{}'); }
+  catch (_) { return {}; }
+}
+
+function saveDeviceRecord(device) {
+  const saved = loadSavedDevices();
+  saved[device.ip] = { name: device.name, ip: device.ip, port: device.port, lastConnected: Date.now() };
+  localStorage.setItem(SAVED_DEVICES_KEY, JSON.stringify(saved));
+}
+
+function forgetDeviceRecord(ip) {
+  const saved = loadSavedDevices();
+  delete saved[ip];
+  localStorage.setItem(SAVED_DEVICES_KEY, JSON.stringify(saved));
+  state.devices.delete(ip);
+  const card = document.getElementById(`device-${ip.replace(/\./g, '-')}`);
+  if (card) card.remove();
+  updateDeviceCountBadge();
+}
+
 /* ─── State ─────────────────────────────────────────────── */
 const state = {
   scanning:    false,
@@ -21,21 +45,33 @@ async function init() {
   document.getElementById('save-dir-label').textContent = saveDir;
 
   registerAPIListeners();
-  autoStartDiscovery();
+  
+  // Restore previously connected devices before scanning
+  restoreSavedDevices();
+
+  // Auto-start discovery
+  startDiscovery();
 }
 
-function autoStartDiscovery() {
-  // Auto-start scanning on launch
-  startDiscovery();
+function restoreSavedDevices() {
+  const saved = loadSavedDevices();
+  for (const record of Object.values(saved)) {
+    const device = { ...record, connected: false, sessionId: null, lastSeen: null };
+    state.devices.set(device.ip, device);
+    renderDeviceCard(device);
+  }
+  updateDeviceCountBadge();
 }
 
 /* ─── Discovery ─────────────────────────────────────────── */
 let discoveryRunning = false;
+let _scanCountdownTimer = null;
 
 async function toggleDiscovery() {
   if (discoveryRunning) {
     await window.siloAPI.stopDiscovery();
     discoveryRunning = false;
+    clearInterval(_scanCountdownTimer);
     setScanState(false);
   } else {
     startDiscovery();
@@ -46,6 +82,19 @@ async function startDiscovery() {
   await window.siloAPI.startDiscovery();
   discoveryRunning = true;
   setScanState(true);
+  
+  // 30s auto-stop
+  let remaining = 30;
+  clearInterval(_scanCountdownTimer);
+  _scanCountdownTimer = setInterval(() => {
+    remaining--;
+    if (remaining <= 0) {
+      clearInterval(_scanCountdownTimer);
+      discoveryRunning = false;
+      setScanState(false);
+      window.siloAPI.stopDiscovery();
+    }
+  }, 1000);
 }
 
 function setScanState(scanning) {
@@ -67,11 +116,17 @@ function setScanState(scanning) {
 /* ─── IPC Event Listeners ───────────────────────────────── */
 function registerAPIListeners() {
   window.siloAPI.onDeviceFound((device) => {
-    addOrUpdateDevice(device, true);
+    addOrUpdateDevice(device);
   });
 
   window.siloAPI.onDeviceUpdated((device) => {
-    addOrUpdateDevice(device, false);
+    addOrUpdateDevice(device);
+  });
+
+  window.siloAPI.onScanTimeout(() => {
+    clearInterval(_scanCountdownTimer);
+    discoveryRunning = false;
+    setScanState(false);
   });
 
   window.siloAPI.onDeviceConnected((info) => {
@@ -80,6 +135,7 @@ function registerAPIListeners() {
       dev.connected  = true;
       dev.sessionId  = info.sessionId;
       updateDeviceCard(dev);
+      saveDeviceRecord(dev);
     }
     toast(`Connected to ${dev?.name || info.ip}`, 'success');
     updateScanDot();
@@ -146,24 +202,46 @@ function registerAPIListeners() {
 }
 
 /* ─── Device Rendering ──────────────────────────────────── */
-function addOrUpdateDevice(device, isNew) {
-  state.devices.set(device.ip, { ...device });
+
+/**
+ * Upsert a device into state + DOM.
+ * ALWAYS checks DOM by element ID first — never creates duplicate cards.
+ */
+function addOrUpdateDevice(device) {
+  // Merge incoming fields over existing state (preserve connected/sessionId)
+  const existing = state.devices.get(device.ip);
+  const merged = { ...existing, ...device };
+  state.devices.set(device.ip, merged);
 
   const grid  = document.getElementById('devices-grid');
   const empty = document.getElementById('devices-empty');
-
   grid.style.display  = 'grid';
   empty.style.display = 'none';
 
-  const existing = document.getElementById(`device-${device.ip.replace(/\./g, '-')}`);
-  if (existing && !isNew) {
-    updateDeviceCard(device);
+  const cardId = `device-${device.ip.replace(/\./g, '-')}`;
+  if (document.getElementById(cardId)) {
+    // Card already exists — just refresh its content
+    updateDeviceCard(merged);
   } else {
-    const card = createDeviceCard(device);
+    // Brand new card
+    const card = createDeviceCard(merged);
     grid.appendChild(card);
   }
 
   updateDeviceCountBadge();
+}
+
+/** Create and insert a card for a device that isn't in the DOM yet. */
+function renderDeviceCard(device) {
+  const grid  = document.getElementById('devices-grid');
+  const empty = document.getElementById('devices-empty');
+  grid.style.display  = 'grid';
+  empty.style.display = 'none';
+
+  const cardId = `device-${device.ip.replace(/\./g, '-')}`;
+  if (!document.getElementById(cardId)) {
+    grid.appendChild(createDeviceCard(device));
+  }
 }
 
 function createDeviceCard(device) {
@@ -193,10 +271,21 @@ function createDeviceCard(device) {
 }
 
 function deviceCardHTML(device) {
-  const dev      = state.devices.get(device.ip) || device;
+  const dev       = state.devices.get(device.ip) || device;
   const connected = dev.connected || device.connected;
-  const statusClass = connected ? 'connected' : 'online';
-  const statusLabel = connected ? 'Connected' : 'Available';
+  const isLive    = dev.lastSeen != null;          // seen in current scan
+  const wasSaved  = !!loadSavedDevices()[device.ip]; // was connected before
+
+  let statusClass, statusLabel;
+  if (connected)       { statusClass = 'connected'; statusLabel = 'Connected'; }
+  else if (isLive)     { statusClass = 'online';    statusLabel = 'Available'; }
+  else if (wasSaved)   { statusClass = 'saved';     statusLabel = 'Last Seen'; }
+  else                 { statusClass = 'online';    statusLabel = 'Available'; }
+
+  const forgetBtn = wasSaved && !connected
+    ? `<button class="btn btn--ghost btn--sm btn--icon" title="Forget device" onclick="forgetDevice('${device.ip}')"
+         style="color:var(--text-muted);padding:0 8px">✕</button>`
+    : '';
 
   return `
     <div class="device-card-top">
@@ -210,7 +299,10 @@ function deviceCardHTML(device) {
         <div class="device-card-name">${escHtml(device.name)}</div>
         <div class="device-card-ip">${device.ip}</div>
       </div>
-      <span class="device-status-badge ${statusClass}">${statusLabel}</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span class="device-status-badge ${statusClass}">${statusLabel}</span>
+        ${forgetBtn}
+      </div>
     </div>
     <div class="device-card-actions">
       ${connected
@@ -221,7 +313,7 @@ function deviceCardHTML(device) {
            <button class="btn btn--danger btn--sm" onclick="disconnectDevice('${device.ip}')">
              Disconnect
            </button>`
-        : `<button class="btn btn--primary btn--sm" style="flex:1" onclick="openPairModal('${device.ip}')">
+        : `<button class="btn btn--primary btn--sm" style="flex:1" onclick="openPairModal('${device.ip}')" ${!isLive && !wasSaved ? 'disabled' : ''}>
              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
              Connect
            </button>`
@@ -375,6 +467,20 @@ function disconnectDevice(deviceIP) {
   dev.sessionId = null;
   updateDeviceCard(dev);
   updateScanDot();
+}
+
+function forgetDevice(ip) {
+  forgetDeviceRecord(ip);
+  state.devices.delete(ip);
+  const cardId = `device-${ip.replace(/\./g, '-')}`;
+  document.getElementById(cardId)?.remove();
+  updateDeviceCountBadge();
+  const grid = document.getElementById('devices-grid');
+  if (state.devices.size === 0) {
+    grid.style.display = 'none';
+    document.getElementById('devices-empty').style.display = 'flex';
+  }
+  toast('Device forgotten', 'info');
 }
 
 /* ─── Transfers Rendering ───────────────────────────────── */

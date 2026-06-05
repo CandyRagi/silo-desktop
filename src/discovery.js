@@ -20,6 +20,7 @@ class DiscoveryService extends EventEmitter {
     super();
     this.socket       = null;
     this.timer        = null;
+    this.autoStopTimer = null;
     this.running      = false;
     this.knownDevices = new Map(); // ip → device info
   }
@@ -27,9 +28,14 @@ class DiscoveryService extends EventEmitter {
   // ── Public API ─────────────────────────────────────────────
 
   start() {
-    if (this.running) return;
+    // If already running just re-broadcast immediately (no duplicate cards)
+    if (this.running) {
+      this._broadcast();
+      return;
+    }
     this.running = true;
-    this.knownDevices.clear();
+    // NOTE: Do NOT clear knownDevices here — devices already shown in UI
+    // would be re-emitted as 'device-found' and create duplicate cards.
 
     this.socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
 
@@ -51,24 +57,37 @@ class DiscoveryService extends EventEmitter {
       this._scheduleBroadcast();
       console.log(`[Discovery] Listening on port ${PORTS.DISCOVERY}`);
     });
+
+    // Auto-stop after 30 seconds
+    this.autoStopTimer = setTimeout(() => {
+      if (!this.running) return;
+      // Stop broadcasting but keep socket open to receive last replies
+      if (this.timer) { clearInterval(this.timer); this.timer = null; }
+      this.running = false;
+      console.log('[Discovery] Auto-stopped after 30 s');
+      this.emit('scan-timeout');
+    }, 30000);
   }
 
   stop() {
-    if (!this.running) return;
+    if (!this.running && !this.socket) return;
     this.running = false;
 
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
+    if (this.autoStopTimer) { clearTimeout(this.autoStopTimer); this.autoStopTimer = null; }
+    if (this.timer)         { clearInterval(this.timer); this.timer = null; }
 
     if (this.socket) {
       try { this.socket.close(); } catch (_) {}
       this.socket = null;
     }
 
-    this.knownDevices.clear();
+    // Don't clear knownDevices — they remain visible in the UI as 'previously seen'
     console.log('[Discovery] Stopped');
+  }
+
+  /** Remove all knowledge of a specific device (e.g. user manually forgets it). */
+  forgetDevice(ip) {
+    this.knownDevices.delete(ip);
   }
 
   getDevices() {
@@ -188,7 +207,7 @@ class DiscoveryService extends EventEmitter {
         name:        deviceName,
         ip:          deviceIP,
         port:        androidPort,
-        lastSeen:    Date.now(),
+        lastSeen:    Date.now(),   // non-null = seen alive in this scan session
         connected:   false,
         sessionId:   null,
       };
