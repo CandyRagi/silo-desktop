@@ -38,7 +38,7 @@ const WINDOW_SIZE = 8;              // Chunks in flight simultaneously
 const ACK_TIMEOUT_MS = 2000;        // ms before retransmit
 const MAX_RETRIES = 5;
 const DISCOVERY_INTERVAL_MS = 2000;
-const SESSION_TIMEOUT_MS = 10000;   // Disconnect if no ping for this long
+const SESSION_TIMEOUT_MS = 6000;   // Disconnect if no ping for this long
 
 // ─── Message Builders ───────────────────────────────────────
 

@@ -385,7 +385,7 @@ class TransferManager extends EventEmitter {
       }
 
       this._send(buildPing(sessionId), session.ip, session.port);
-    }, 3000);
+    }, 2000);
   }
 
   async _sendChunkWithRetry(fd, sessionId, fileId, chunkIndex, totalChunks, session, ackSet) {
