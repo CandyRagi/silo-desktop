@@ -49,8 +49,8 @@ async function init() {
   // Restore previously connected devices before scanning
   restoreSavedDevices();
 
-  // Auto-start discovery
-  startDiscovery();
+  // Initialize scan button state (auto-scan disabled per user request)
+  setScanState(false);
 }
 
 function restoreSavedDevices() {
@@ -67,12 +67,39 @@ function restoreSavedDevices() {
 let discoveryRunning = false;
 let _scanCountdownTimer = null;
 
+function getConnectedDevice() {
+  for (const dev of state.devices.values()) {
+    if (dev.connected) return dev;
+  }
+  return null;
+}
+
 async function toggleDiscovery() {
   if (discoveryRunning) {
     await window.siloAPI.stopDiscovery();
     discoveryRunning = false;
     clearInterval(_scanCountdownTimer);
     setScanState(false);
+  } else {
+    const connectedDev = getConnectedDevice();
+    if (connectedDev) {
+      if (confirm(`You are currently connected to ${connectedDev.name}.\n\nDo you want to disconnect and scan for other devices?`)) {
+        disconnectDevice(connectedDev.ip);
+        startDiscovery();
+      }
+    } else {
+      startDiscovery();
+    }
+  }
+}
+
+function refreshDiscovery() {
+  const connectedDev = getConnectedDevice();
+  if (connectedDev) {
+    if (confirm(`You are currently connected to ${connectedDev.name}.\n\nDo you want to disconnect and refresh?`)) {
+      disconnectDevice(connectedDev.ip);
+      startDiscovery();
+    }
   } else {
     startDiscovery();
   }
@@ -85,10 +112,13 @@ async function startDiscovery() {
   
   // 30s auto-stop
   let remaining = 30;
+  setScanState(true, remaining);
   clearInterval(_scanCountdownTimer);
   _scanCountdownTimer = setInterval(() => {
     remaining--;
-    if (remaining <= 0) {
+    if (remaining > 0) {
+      setScanState(true, remaining);
+    } else {
       clearInterval(_scanCountdownTimer);
       discoveryRunning = false;
       setScanState(false);
@@ -97,21 +127,42 @@ async function startDiscovery() {
   }, 1000);
 }
 
-function setScanState(scanning) {
+function setScanState(scanning, secondsLeft) {
   const dot   = document.getElementById('scan-dot');
   const label = document.getElementById('scan-label');
   const btn   = document.getElementById('btn-scan');
 
   if (scanning) {
     dot.className   = 'scan-dot scanning';
-    label.textContent = 'Scanning…';
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg> Stop Scanning`;
+    const countdown = secondsLeft != null ? ` ${secondsLeft}s` : '';
+    label.textContent = `Scanning…${countdown}`;
+    btn.className = 'btn btn-scan-scanning btn--full';
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg> Stop Scanning${countdown}`;
   } else {
     dot.className   = 'scan-dot';
     label.textContent = 'Idle';
+    btn.className = 'btn btn-scan-idle btn--full';
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Scan for Devices`;
   }
 }
+
+// 2s auto-refresh to downgrade "Available" devices to "Last Seen" if they stop broadcasting
+setInterval(() => {
+  let changed = false;
+  const now = Date.now();
+  for (const [ip, dev] of state.devices.entries()) {
+    // If not connected and we haven't seen it in >6s, downgrade its lastSeen status
+    if (!dev.connected && dev.lastSeen && (now - dev.lastSeen > 6000)) {
+      dev.lastSeen = null;
+      changed = true;
+    }
+  }
+  if (changed) {
+    for (const dev of state.devices.values()) {
+      updateDeviceCard(dev);
+    }
+  }
+}, 2000);
 
 /* ─── IPC Event Listeners ───────────────────────────────── */
 function registerAPIListeners() {
@@ -287,38 +338,43 @@ function deviceCardHTML(device) {
          style="color:var(--text-muted);padding:0 8px">✕</button>`
     : '';
 
+  const opacityStyle = (wasSaved && !isLive && !connected) ? 'opacity: 0.5; filter: grayscale(0.5);' : '';
+
   return `
-    <div class="device-card-top">
-      <div class="device-card-icon">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-          <rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" stroke-width="1.5"/>
-          <circle cx="12" cy="18" r="1" fill="currentColor"/>
-        </svg>
+    <div style="${opacityStyle} display: flex; flex-direction: column; gap: 16px;">
+      <div class="device-card-top">
+        <div class="device-card-icon">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="12" cy="18" r="1" fill="currentColor"/>
+          </svg>
+        </div>
+        <div class="device-card-info">
+          <div class="device-card-name">${escHtml(device.name)}</div>
+          <div class="device-card-ip">${device.ip}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="device-status-dot ${statusClass}" title="${statusLabel}"></div>
+          ${forgetBtn}
+        </div>
       </div>
-      <div class="device-card-info">
-        <div class="device-card-name">${escHtml(device.name)}</div>
-        <div class="device-card-ip">${device.ip}</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span class="device-status-badge ${statusClass}">${statusLabel}</span>
-        ${forgetBtn}
+      <div class="device-card-actions">
+        ${connected
+          ? `<button class="btn btn--ghost btn--sm" style="flex:1" onclick="pickAndSend('${device.ip}')">
+               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+               Send File
+             </button>
+             <button class="btn btn--danger btn--sm" onclick="disconnectDevice('${device.ip}')">
+               Disconnect
+             </button>`
+          : `<button class="btn btn--primary btn--sm" style="flex:1" onclick="openPairModal('${device.ip}')" ${!isLive ? 'disabled' : ''}>
+               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+               Connect
+             </button>`
+        }
       </div>
     </div>
-    <div class="device-card-actions">
-      ${connected
-        ? `<button class="btn btn--ghost btn--sm" style="flex:1" onclick="pickAndSend('${device.ip}')">
-             <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-             Send File
-           </button>
-           <button class="btn btn--danger btn--sm" onclick="disconnectDevice('${device.ip}')">
-             Disconnect
-           </button>`
-        : `<button class="btn btn--primary btn--sm" style="flex:1" onclick="openPairModal('${device.ip}')" ${!isLive && !wasSaved ? 'disabled' : ''}>
-             <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-             Connect
-           </button>`
-      }
-    </div>`;
+  `;
 }
 
 function updateDeviceCard(device) {
@@ -358,6 +414,15 @@ function generatePin() {
 function openPairModal(deviceIP) {
   const device = state.devices.get(deviceIP);
   if (!device) return;
+
+  const connectedDev = getConnectedDevice();
+  if (connectedDev && connectedDev.ip !== deviceIP) {
+    if (confirm(`You are currently connected to ${connectedDev.name}.\n\nDo you want to disconnect and connect to ${device.name}?`)) {
+      disconnectDevice(connectedDev.ip);
+    } else {
+      return;
+    }
+  }
 
   const pin = generatePin();
   state.pendingPair = { ip: device.ip, port: device.port, name: device.name, pin };
