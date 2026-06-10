@@ -33,6 +33,13 @@ class DiscoveryService extends EventEmitter {
       this._broadcast();
       return;
     }
+
+    // Clean up any leftover socket from a previous auto-stopped session
+    if (this.socket) {
+      try { this.socket.close(); } catch (_) {}
+      this.socket = null;
+    }
+
     this.running = true;
     // NOTE: Do NOT clear knownDevices here — devices already shown in UI
     // would be re-emitted as 'device-found' and create duplicate cards.
@@ -61,9 +68,13 @@ class DiscoveryService extends EventEmitter {
     // Auto-stop after 30 seconds
     this.autoStopTimer = setTimeout(() => {
       if (!this.running) return;
-      // Stop broadcasting but keep socket open to receive last replies
+      // Stop broadcasting AND close socket so next start() can rebind cleanly
       if (this.timer) { clearInterval(this.timer); this.timer = null; }
       this.running = false;
+      if (this.socket) {
+        try { this.socket.close(); } catch (_) {}
+        this.socket = null;
+      }
       console.log('[Discovery] Auto-stopped after 30 s');
       this.emit('scan-timeout');
     }, 30000);

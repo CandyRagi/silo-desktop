@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('siloAPI', {
   startDiscovery:  ()          => ipcRenderer.invoke('start-discovery'),
   stopDiscovery:   ()          => ipcRenderer.invoke('stop-discovery'),
   getDevices:      ()          => ipcRenderer.invoke('get-devices'),
+  forgetDevice:    (ip)        => ipcRenderer.invoke('forget-device', ip),
 
   // ── Pairing ───────────────────────────────────────────────
   connectDevice:   (args)      => ipcRenderer.invoke('connect-device', args),

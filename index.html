@@ -30,16 +30,10 @@
       <span>Silo</span>
     </div>
   </div>
-  <div class="titlebar-controls">
-    <button id="btn-minimize" class="titlebar-btn" onclick="window.siloAPI.minimize()" title="Minimize">
-      <svg width="10" height="2" viewBox="0 0 10 2"><rect width="10" height="2" rx="1" fill="currentColor"/></svg>
-    </button>
-    <button id="btn-maximize" class="titlebar-btn" onclick="window.siloAPI.maximize()" title="Maximize">
-      <svg width="10" height="10" viewBox="0 0 10 10"><rect x="1" y="1" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
-    </button>
-    <button id="btn-close" class="titlebar-btn titlebar-btn--close" onclick="window.siloAPI.close()" title="Close">
-      <svg width="10" height="10" viewBox="0 0 10 10"><path d="M1 1l8 8M9 1l-8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-    </button>
+  <div class="titlebar-controls mac-controls">
+    <button id="btn-minimize" class="mac-btn mac-min" onclick="window.siloAPI.minimize()" title="Minimize"></button>
+    <button id="btn-maximize" class="mac-btn mac-max" onclick="window.siloAPI.maximize()" title="Maximize"></button>
+    <button id="btn-close" class="mac-btn mac-close" onclick="window.siloAPI.close()" title="Close"></button>
   </div>
 </div>
 
@@ -58,7 +52,6 @@
         </div>
         <div>
           <div class="device-name" id="desktop-name">My PC</div>
-          <div class="device-ip" id="desktop-ip">—</div>
         </div>
       </div>
 
@@ -116,16 +109,11 @@
 
       <div id="devices-empty" class="empty-state">
         <div class="empty-icon">
-          <div class="radar-ring ring1"></div>
-          <div class="radar-ring ring2"></div>
-          <div class="radar-ring ring3"></div>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-            <path d="M1.42 9a16 16 0 0121.16 0M5 12.55a11 11 0 0114.08 0M10.73 16.11a6 6 0 012.54 0M12 20h.01" stroke="url(#radar-g)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <defs>
-              <linearGradient id="radar-g" x1="1" y1="9" x2="23" y2="20" gradientUnits="userSpaceOnUse">
-                <stop stop-color="#6366f1"/><stop offset="1" stop-color="#a78bfa"/>
-              </linearGradient>
-            </defs>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted)">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+            <line x1="12" y1="20" x2="12.01" y2="20"></line>
           </svg>
         </div>
         <p class="empty-title">No devices found</p>

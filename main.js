@@ -100,6 +100,11 @@ function registerIPC() {
     return discovery.getDevices();
   });
 
+  ipcMain.handle('forget-device', (_event, ip) => {
+    discovery.knownDevices.delete(ip);
+    return { ok: true };
+  });
+
   // Pairing
   ipcMain.handle('connect-device', async (_event, { ip, port, pin }) => {
     try {

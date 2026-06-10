@@ -93,16 +93,17 @@ async function toggleDiscovery() {
   }
 }
 
-function refreshDiscovery() {
-  const connectedDev = getConnectedDevice();
-  if (connectedDev) {
-    if (confirm(`You are currently connected to ${connectedDev.name}.\n\nDo you want to disconnect and refresh?`)) {
-      disconnectDevice(connectedDev.ip);
-      startDiscovery();
+async function refreshDiscovery() {
+  const icon = document.querySelector('.tab-header button svg');
+  if (icon) icon.style.animation = 'spin 1s linear infinite';
+
+  await window.siloAPI.startDiscovery();
+  setTimeout(async () => {
+    if (!discoveryRunning) {
+      await window.siloAPI.stopDiscovery();
     }
-  } else {
-    startDiscovery();
-  }
+    if (icon) icon.style.animation = 'none';
+  }, 2500);
 }
 
 async function startDiscovery() {
@@ -112,13 +113,10 @@ async function startDiscovery() {
   
   // 30s auto-stop
   let remaining = 30;
-  setScanState(true, remaining);
   clearInterval(_scanCountdownTimer);
   _scanCountdownTimer = setInterval(() => {
     remaining--;
-    if (remaining > 0) {
-      setScanState(true, remaining);
-    } else {
+    if (remaining <= 0) {
       clearInterval(_scanCountdownTimer);
       discoveryRunning = false;
       setScanState(false);
@@ -127,20 +125,30 @@ async function startDiscovery() {
   }, 1000);
 }
 
-function setScanState(scanning, secondsLeft) {
-  const dot   = document.getElementById('scan-dot');
+function updateScanLabel() {
   const label = document.getElementById('scan-label');
+  const connectedDev = getConnectedDevice();
+  if (connectedDev) {
+    label.textContent = 'Connected';
+    label.style.color = '#818cf8';
+  } else {
+    label.textContent = 'Idle';
+    label.style.color = 'inherit';
+  }
+}
+
+function setScanState(scanning) {
+  const dot   = document.getElementById('scan-dot');
   const btn   = document.getElementById('btn-scan');
+
+  updateScanLabel();
 
   if (scanning) {
     dot.className   = 'scan-dot scanning';
-    const countdown = secondsLeft != null ? ` ${secondsLeft}s` : '';
-    label.textContent = `Scanning…${countdown}`;
     btn.className = 'btn btn-scan-scanning btn--full';
-    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg> Stop Scanning${countdown}`;
+    btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/></svg> Stop Scanning`;
   } else {
     dot.className   = 'scan-dot';
-    label.textContent = 'Idle';
     btn.className = 'btn btn-scan-idle btn--full';
     btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg> Scan for Devices`;
   }
@@ -162,6 +170,7 @@ setInterval(() => {
       updateDeviceCard(dev);
     }
   }
+  updateScanLabel();
 }, 2000);
 
 /* ─── IPC Event Listeners ───────────────────────────────── */
@@ -190,6 +199,13 @@ function registerAPIListeners() {
     }
     toast(`Connected to ${dev?.name || info.ip}`, 'success');
     updateScanDot();
+    // Stop scanning as soon as we have a connection
+    if (discoveryRunning) {
+      clearInterval(_scanCountdownTimer);
+      discoveryRunning = false;
+      setScanState(false);
+      window.siloAPI.stopDiscovery();
+    }
   });
 
   window.siloAPI.onDeviceDisconnected((info) => {
@@ -537,6 +553,7 @@ function disconnectDevice(deviceIP) {
 function forgetDevice(ip) {
   forgetDeviceRecord(ip);
   state.devices.delete(ip);
+  window.siloAPI.forgetDevice(ip);
   const cardId = `device-${ip.replace(/\./g, '-')}`;
   document.getElementById(cardId)?.remove();
   updateDeviceCountBadge();
