@@ -57,6 +57,14 @@ class TransferManager extends EventEmitter {
 
   stop() {
     if (this.socket) {
+      // Gracefully disconnect all sessions before closing socket
+      for (const [sessionId, session] of this.sessions.entries()) {
+        try {
+          const buf = Buffer.from(buildDisconnect(sessionId), 'utf8');
+          this.socket.send(buf, 0, buf.length, session.port, session.ip);
+          console.log(`[Transfer] Sent DISCONNECT to session ${sessionId} before stopping`);
+        } catch (_) {}
+      }
       try { this.socket.close(); } catch (_) {}
       this.socket = null;
     }

@@ -94,6 +94,14 @@ async function toggleDiscovery() {
 }
 
 async function refreshDiscovery() {
+  const connectedDev = getConnectedDevice();
+  if (connectedDev) {
+    if (!confirm(`You are currently connected to ${connectedDev.name}.\n\nDo you want to disconnect and scan for other devices?`)) {
+      return;
+    }
+    disconnectDevice(connectedDev.ip);
+  }
+
   const icon = document.querySelector('.tab-header button svg');
   if (icon) icon.style.animation = 'spin 1s linear infinite';
 
