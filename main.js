@@ -191,5 +191,8 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   discovery?.stop();
   transferMgr?.stop();
-  if (process.platform !== 'darwin') app.quit();
+  // Delay app.quit() to allow UDP DISCONNECT packets to reach the network interface
+  setTimeout(() => {
+    if (process.platform !== 'darwin') app.quit();
+  }, 100);
 });

@@ -65,7 +65,9 @@ class TransferManager extends EventEmitter {
           console.log(`[Transfer] Sent DISCONNECT to session ${sessionId} before stopping`);
         } catch (_) {}
       }
-      try { this.socket.close(); } catch (_) {}
+      // Delay closing the socket to give OS time to flush UDP buffers
+      const sock = this.socket;
+      setTimeout(() => { try { sock.close(); } catch (_) {} }, 100);
       this.socket = null;
     }
     this.sessions.clear();
