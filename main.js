@@ -8,6 +8,7 @@ const os   = require('os');
 
 const DiscoveryService = require('./src/discovery');
 const TransferManager  = require('./src/transfer');
+const { mouse, left, right, Point } = require('@nut-tree-fork/nut-js');
 
 let mainWindow    = null;
 let discovery     = null;
@@ -77,6 +78,32 @@ function initServices() {
   });
   transferMgr.on('transfer-cancelled', (info) => {
     mainWindow?.webContents.send('transfer-cancelled', info);
+  });
+
+  // Mouse Control Events
+  transferMgr.on('mouse-move', async (info) => {
+    try {
+      // nut-js moves mouse relative to current position, or we calculate absolute
+      // The phone sends dx/dy as floats. Multiply by a sensitivity factor if needed.
+      const current = await mouse.getPosition();
+      // Increase sensitivity to make the trackpad feel natural
+      const sensitivity = 2.0;
+      await mouse.setPosition(new Point(current.x + info.dx * sensitivity, current.y + info.dy * sensitivity));
+    } catch (err) {
+      console.warn('[Mouse] Move error:', err);
+    }
+  });
+
+  transferMgr.on('mouse-click', async (info) => {
+    try {
+      if (info.button === 'left') {
+        await mouse.leftClick();
+      } else if (info.button === 'right') {
+        await mouse.rightClick();
+      }
+    } catch (err) {
+      console.warn('[Mouse] Click error:', err);
+    }
   });
 
   transferMgr.start();

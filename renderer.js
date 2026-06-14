@@ -739,18 +739,7 @@ function formatTime(ts) {
 }
 
 function fileEmoji(name) {
-  const ext = (name || '').split('.').pop().toLowerCase();
-  const map = {
-    jpg:'🖼', jpeg:'🖼', png:'🖼', gif:'🖼', webp:'🖼', svg:'🖼', heic:'🖼',
-    mp4:'🎬', mov:'🎬', avi:'🎬', mkv:'🎬', webm:'🎬',
-    mp3:'🎵', wav:'🎵', flac:'🎵', aac:'🎵', ogg:'🎵',
-    pdf:'📄', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', ppt:'📊', pptx:'📊',
-    zip:'📦', rar:'📦', tar:'📦', gz:'📦', '7z':'📦',
-    apk:'📱', exe:'⚙', dmg:'💿',
-    txt:'📃', md:'📃', json:'📋', xml:'📋', csv:'📋',
-    js:'💻', ts:'💻', py:'💻', kt:'💻', java:'💻', cpp:'💻', c:'💻',
-  };
-  return map[ext] || '📁';
+  return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted)"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`;
 }
 
 /* ─── Bootstrap ─────────────────────────────────────────── */

@@ -236,6 +236,12 @@ class TransferManager extends EventEmitter {
       case MSG.DISCONNECT:
         this._handleDisconnect(parsed);
         break;
+      case MSG.MOUSE_MOVE:
+        this.emit('mouse-move', parsed);
+        break;
+      case MSG.MOUSE_CLICK:
+        this.emit('mouse-click', parsed);
+        break;
     }
   }
 

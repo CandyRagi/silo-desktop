@@ -31,6 +31,10 @@ const MSG = {
   PING:       'SILO_PING',
   PONG:       'SILO_PONG',
   DISCONNECT: 'SILO_DISCONNECT',
+
+  // Mouse Control
+  MOUSE_MOVE: 'SILO_MOUSE_MOVE',
+  MOUSE_CLICK: 'SILO_MOUSE_CLICK',
 };
 
 const CHUNK_SIZE = 60 * 1024;       // 60 KB data per chunk
@@ -146,6 +150,12 @@ function parseMessage(data) {
 
       case MSG.DISCONNECT:
         return { type, sessionId: parts[1] };
+
+      case MSG.MOUSE_MOVE:
+        return { type, sessionId: parts[1], dx: parseFloat(parts[2]), dy: parseFloat(parts[3]) };
+
+      case MSG.MOUSE_CLICK:
+        return { type, sessionId: parts[1], button: parts[2] };
 
       default:
         return null;
