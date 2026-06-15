@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld('siloAPI', {
   getSaveDir:      ()          => ipcRenderer.invoke('get-save-dir'),
   setSaveDir:      ()          => ipcRenderer.invoke('set-save-dir'),
   openSaveDir:     ()          => ipcRenderer.invoke('open-save-dir'),
+  setAllowControl: (allow)     => ipcRenderer.invoke('set-allow-control', allow),
   revealFile:      (args)      => ipcRenderer.invoke('reveal-file', args),
   getHostname:     ()          => ipcRenderer.invoke('get-hostname'),
   getLocalIp:      ()          => ipcRenderer.invoke('get-local-ip'),

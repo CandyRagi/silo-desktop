@@ -44,6 +44,10 @@ async function init() {
   const saveDir = await window.siloAPI.getSaveDir();
   document.getElementById('save-dir-label').textContent = saveDir;
 
+  const allowControl = localStorage.getItem('allow_control') !== 'false';
+  document.getElementById('setting-allow-control').checked = allowControl;
+  window.siloAPI.setAllowControl(allowControl);
+
   registerAPIListeners();
   
   // Restore previously connected devices before scanning
@@ -695,6 +699,11 @@ async function changeSaveDir() {
 
 async function openSaveDir() {
   await window.siloAPI.openSaveDir();
+}
+
+function toggleAllowControl(checked) {
+  localStorage.setItem('allow_control', checked);
+  window.siloAPI.setAllowControl(checked);
 }
 
 /* ─── Tab Navigation ────────────────────────────────────── */

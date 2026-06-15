@@ -176,6 +176,22 @@
         </div>
 
         <div class="settings-card">
+          <h2 class="settings-section-title">Permissions</h2>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label">Allow control by phone</div>
+              <div class="settings-value">Let connected devices control your mouse and keyboard</div>
+            </div>
+            <div class="settings-actions">
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-allow-control" onchange="toggleAllowControl(this.checked)" checked>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-card">
           <h2 class="settings-section-title">About</h2>
           <div class="settings-row">
             <div>

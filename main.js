@@ -82,6 +82,7 @@ function initServices() {
 
   // Mouse Control Events
   transferMgr.on('mouse-move', async (info) => {
+    if (!transferMgr.allowControl) return;
     try {
       // nut-js moves mouse relative to current position, or we calculate absolute
       // The phone sends dx/dy as floats. Multiply by a sensitivity factor if needed.
@@ -95,6 +96,7 @@ function initServices() {
   });
 
   transferMgr.on('mouse-click', async (info) => {
+    if (!transferMgr.allowControl) return;
     try {
       if (info.button === 'left') {
         await mouse.leftClick();
@@ -171,23 +173,25 @@ function registerIPC() {
   ipcMain.handle('get-save-dir', () => transferMgr.getSaveDir());
 
   ipcMain.handle('set-save-dir', async () => {
-    const result = await dialog.showOpenDialog(mainWindow, {
-      properties: ['openDirectory'],
-      title: 'Choose folder for received files',
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory', 'createDirectory']
     });
-    if (!result.canceled && result.filePaths[0]) {
-      transferMgr.setSaveDir(result.filePaths[0]);
-      return { ok: true, dir: result.filePaths[0] };
+    if (!canceled && filePaths.length > 0) {
+      transferMgr.setSaveDir(filePaths[0]);
     }
-    return { ok: false };
+    return transferMgr.getSaveDir();
   });
 
   // Open saved file location
-  ipcMain.handle('open-save-dir', () => {
-    shell.openPath(transferMgr.getSaveDir());
+  ipcMain.handle('open-save-dir', async () => {
+    await shell.openPath(transferMgr.getSaveDir());
   });
 
-  ipcMain.handle('reveal-file', (_event, { filePath }) => {
+  ipcMain.handle('set-allow-control', (e, allow) => {
+    transferMgr.setAllowControl(allow);
+  });
+
+  ipcMain.handle('reveal-file', async (e, { filePath }) => {
     shell.showItemInFolder(filePath);
   });
 

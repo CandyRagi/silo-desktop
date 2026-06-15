@@ -30,6 +30,7 @@ class TransferManager extends EventEmitter {
     this._pendingPairReqs = new Map(); // sessionId → { resolve, reject, timer }
     this._inboundTransfers = new Map(); // `${sessionId}:${fileId}` → inbound state
     this._outboundTransfers = new Map(); // `${sessionId}:${fileId}` → outbound state
+    this.allowControl = true;
   }
 
   // ── Public API ─────────────────────────────────────────────
@@ -80,6 +81,14 @@ class TransferManager extends EventEmitter {
 
   getSaveDir() {
     return this.saveDir;
+  }
+
+  setAllowControl(allow) {
+    this.allowControl = allow;
+    // Notify all active sessions
+    for (const [sessionId, session] of this.sessions.entries()) {
+      this._send(`SILO_CTRL_ALLOW|${sessionId}|${allow}`, session.ip, session.port);
+    }
   }
 
   /**
@@ -262,6 +271,10 @@ class TransferManager extends EventEmitter {
 
     console.log(`[Transfer] Paired! Session ${sessionId} with ${rinfo.address}`);
     this.emit('device-connected', { sessionId, ip: rinfo.address, port: PORTS.ANDROID });
+    
+    // Send initial allow control state
+    this._send(`SILO_CTRL_ALLOW|${sessionId}|${this.allowControl}`, rinfo.address, PORTS.ANDROID);
+    
     pending.resolve(sessionId);
 
     // Start keepalive
