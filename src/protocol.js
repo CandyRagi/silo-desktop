@@ -35,6 +35,7 @@ const MSG = {
   // Mouse Control
   MOUSE_MOVE: 'SILO_MOUSE_MOVE',
   MOUSE_CLICK: 'SILO_MOUSE_CLICK',
+  KEYBOARD_INPUT: 'SILO_KEYBOARD_INPUT',
 };
 
 const CHUNK_SIZE = 60 * 1024;       // 60 KB data per chunk
@@ -156,6 +157,9 @@ function parseMessage(data) {
 
       case MSG.MOUSE_CLICK:
         return { type, sessionId: parts[1], button: parts[2] };
+
+      case MSG.KEYBOARD_INPUT:
+        return { type, sessionId: parts[1], key: decodeURIComponent(parts[2].replace(/\+/g, '%20')) };
 
       default:
         return null;

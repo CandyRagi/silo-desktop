@@ -8,7 +8,7 @@ const os   = require('os');
 
 const DiscoveryService = require('./src/discovery');
 const TransferManager  = require('./src/transfer');
-const { mouse, left, right, Point } = require('@nut-tree-fork/nut-js');
+const { mouse, left, right, Point, keyboard, Key } = require('@nut-tree-fork/nut-js');
 
 let mainWindow    = null;
 let discovery     = null;
@@ -105,6 +105,22 @@ function initServices() {
       }
     } catch (err) {
       console.warn('[Mouse] Click error:', err);
+    }
+  });
+
+  // Keyboard Control Events
+  transferMgr.on('keyboard-input', async (info) => {
+    if (!transferMgr.allowControl) return;
+    try {
+      if (info.key === 'BACKSPACE') {
+        await keyboard.type(Key.Backspace);
+      } else if (info.key === 'ENTER') {
+        await keyboard.type(Key.Return);
+      } else {
+        await keyboard.type(info.key);
+      }
+    } catch (err) {
+      console.warn('[Keyboard] Input error:', err);
     }
   });
 

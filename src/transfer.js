@@ -251,6 +251,9 @@ class TransferManager extends EventEmitter {
       case MSG.MOUSE_CLICK:
         this.emit('mouse-click', parsed);
         break;
+      case MSG.KEYBOARD_INPUT:
+        this.emit('keyboard-input', parsed);
+        break;
     }
   }
 
