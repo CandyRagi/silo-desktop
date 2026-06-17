@@ -71,10 +71,50 @@ function initServices() {
     mainWindow?.webContents.send('transfer-incoming', info);
   });
   transferMgr.on('transfer-progress', (info) => {
-    mainWindow?.webContents.send('transfer-progress', info);
+    if (mainWindow) mainWindow.webContents.send('transfer-progress', info);
   });
+
+  // History Management
+  const historyPath = path.join(app.getPath('userData'), 'history.json');
+
+  function loadHistory() {
+    try {
+      if (fs.existsSync(historyPath)) {
+        return JSON.parse(fs.readFileSync(historyPath, 'utf8'));
+      }
+    } catch (err) {
+      console.error('Failed to load history:', err);
+    }
+    return [];
+  }
+
+  function saveHistoryItem(item) {
+    const history = loadHistory();
+    history.unshift(item);
+    if (history.length > 500) history.length = 500;
+    try {
+      fs.writeFileSync(historyPath, JSON.stringify(history, null, 2), 'utf8');
+    } catch (err) {
+      console.error('Failed to save history:', err);
+    }
+  }
+
+  function clearHistoryFile() {
+    try {
+      if (fs.existsSync(historyPath)) fs.unlinkSync(historyPath);
+    } catch (err) {}
+  }
+
   transferMgr.on('transfer-complete', (info) => {
-    mainWindow?.webContents.send('transfer-complete', info);
+    saveHistoryItem({
+      fileName: info.fileName,
+      totalBytes: info.totalBytes,
+      direction: info.direction,
+      status: 'complete',
+      timestamp: Date.now(),
+      savedPath: info.savedPath
+    });
+    if (mainWindow) mainWindow.webContents.send('transfer-complete', info);
   });
   transferMgr.on('transfer-cancelled', (info) => {
     mainWindow?.webContents.send('transfer-cancelled', info);
@@ -205,6 +245,17 @@ function registerIPC() {
 
   ipcMain.handle('set-allow-control', (e, allow) => {
     transferMgr.setAllowControl(allow);
+  });
+
+  ipcMain.handle('open-path', async (_event, targetPath) => {
+    await shell.showItemInFolder(targetPath);
+  });
+
+  ipcMain.handle('get-history', () => loadHistory());
+  
+  ipcMain.handle('clear-history', () => {
+    clearHistoryFile();
+    return { ok: true };
   });
 
   ipcMain.handle('reveal-file', async (e, { filePath }) => {

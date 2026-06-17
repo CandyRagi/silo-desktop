@@ -484,7 +484,16 @@ html, body {
   opacity: 0; transition: opacity 0.15s;
   color: var(--text-muted); font-size: 11px; white-space: nowrap;
 }
+.history-item-reveal:hover { color: var(--text-primary); }
 .history-item:hover .history-item-reveal { opacity: 1; }
+
+.history-send {
+  border-left: 3px solid #4ade80; /* Green */
+}
+
+.history-receive {
+  border-left: 3px solid #facc15; /* Yellow */
+}
 
 /* ═══════════════════ SETTINGS ═══════════════════ */
 .settings-list { padding: 24px 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }

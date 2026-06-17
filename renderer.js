@@ -53,6 +53,13 @@ async function init() {
   // Restore previously connected devices before scanning
   restoreSavedDevices();
 
+  // Load persisted history
+  const savedHistory = await window.siloAPI.getHistory();
+  if (savedHistory && savedHistory.length > 0) {
+    state.history = savedHistory;
+    renderHistory();
+  }
+
   // Initialize scan button state (auto-scan disabled per user request)
   setScanState(false);
 }
@@ -666,15 +673,15 @@ function renderHistory() {
 
   for (const item of state.history) {
     const el = document.createElement('div');
-    el.className = 'history-item';
+    el.className = `history-item history-${item.direction}`;
     el.innerHTML = `
       <div class="history-item-icon">${fileEmoji(item.fileName)}</div>
       <div class="history-item-info">
         <div class="history-item-name">${escHtml(item.fileName)}</div>
-        <div class="history-item-meta">${formatBytes(item.fileSize)} · ${item.direction === 'send' ? 'Sent' : 'Received'} · ${formatTime(item.timestamp)}</div>
+        <div class="history-item-meta">${formatBytes(item.totalBytes)} · ${item.direction === 'send' ? 'Sent' : 'Received'} · ${formatTime(item.timestamp)}</div>
       </div>
       <span class="transfer-badge done">Done</span>
-      ${item.savedPath ? '<span class="history-item-reveal">Show in folder →</span>' : ''}`;
+      ${item.savedPath ? '<div class="history-item-reveal" title="Show in folder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></div>' : ''}`;
 
     if (item.savedPath) {
       el.onclick = () => window.siloAPI.revealFile({ filePath: item.savedPath });
