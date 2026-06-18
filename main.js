@@ -14,6 +14,38 @@ let mainWindow    = null;
 let discovery     = null;
 let transferMgr   = null;
 
+// ── History Management ─────────────────────────────────────
+const fs = require('fs');
+const historyPath = path.join(app.getPath('userData'), 'history.json');
+
+function loadHistory() {
+  try {
+    if (fs.existsSync(historyPath)) {
+      return JSON.parse(fs.readFileSync(historyPath, 'utf8'));
+    }
+  } catch (err) {
+    console.error('Failed to load history:', err);
+  }
+  return [];
+}
+
+function saveHistoryItem(item) {
+  const history = loadHistory();
+  history.unshift(item);
+  if (history.length > 500) history.length = 500;
+  try {
+    fs.writeFileSync(historyPath, JSON.stringify(history, null, 2), 'utf8');
+  } catch (err) {
+    console.error('Failed to save history:', err);
+  }
+}
+
+function clearHistoryFile() {
+  try {
+    if (fs.existsSync(historyPath)) fs.unlinkSync(historyPath);
+  } catch (err) {}
+}
+
 // ── Window ─────────────────────────────────────────────────
 
 function createWindow() {
@@ -73,37 +105,6 @@ function initServices() {
   transferMgr.on('transfer-progress', (info) => {
     if (mainWindow) mainWindow.webContents.send('transfer-progress', info);
   });
-
-  // History Management
-  const historyPath = path.join(app.getPath('userData'), 'history.json');
-
-  function loadHistory() {
-    try {
-      if (fs.existsSync(historyPath)) {
-        return JSON.parse(fs.readFileSync(historyPath, 'utf8'));
-      }
-    } catch (err) {
-      console.error('Failed to load history:', err);
-    }
-    return [];
-  }
-
-  function saveHistoryItem(item) {
-    const history = loadHistory();
-    history.unshift(item);
-    if (history.length > 500) history.length = 500;
-    try {
-      fs.writeFileSync(historyPath, JSON.stringify(history, null, 2), 'utf8');
-    } catch (err) {
-      console.error('Failed to save history:', err);
-    }
-  }
-
-  function clearHistoryFile() {
-    try {
-      if (fs.existsSync(historyPath)) fs.unlinkSync(historyPath);
-    } catch (err) {}
-  }
 
   transferMgr.on('transfer-complete', (info) => {
     saveHistoryItem({

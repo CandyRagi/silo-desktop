@@ -442,10 +442,6 @@ function updateScanDot() {
 /* ─── PIN Modal ─────────────────────────────────────────── */
 let _countdownTimer = null;
 
-function generatePin() {
-  return Array.from({ length: 6 }, () => Math.floor(Math.random() * 10)).join('');
-}
-
 function openPairModal(deviceIP) {
   const device = state.devices.get(deviceIP);
   if (!device) return;
@@ -459,14 +455,8 @@ function openPairModal(deviceIP) {
     }
   }
 
-  const pin = generatePin();
+  const pin = "000000"; // Dummy PIN for protocol compatibility
   state.pendingPair = { ip: device.ip, port: device.port, name: device.name, pin };
-
-  for (let i = 0; i < 6; i++) {
-    const el = document.getElementById(`pin${i}`);
-    el.textContent = pin[i];
-    el.classList.remove('error');
-  }
 
   document.getElementById('modal-device-name').textContent = device.name;
   document.getElementById('modal-error').style.display = 'none';
@@ -517,7 +507,6 @@ async function startPairing() {
   } else {
     document.getElementById('pair-btn-text').textContent = 'Timed out';
     showPinError(result.error || 'Phone did not respond in time');
-    for (let i = 0; i < 6; i++) document.getElementById(`pin${i}`).classList.add('error');
     // Swap Cancel → Retry
     const cancelBtn = document.getElementById('btn-pair-cancel');
     cancelBtn.textContent = 'Retry';
@@ -529,11 +518,6 @@ function closePairModal() {
   clearInterval(_countdownTimer);
   document.getElementById('modal-overlay').style.display = 'none';
   document.getElementById('modal-error').style.display = 'none';
-  for (let i = 0; i < 6; i++) {
-    const el = document.getElementById(`pin${i}`);
-    el.textContent = '';
-    el.classList.remove('error');
-  }
   state.pendingPair = null;
 }
 
