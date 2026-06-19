@@ -10,6 +10,7 @@ const path   = require('path');
 const os     = require('os');
 const crypto = require('crypto');
 const { EventEmitter } = require('events');
+const { clipboard } = require('electron');
 
 const {
   PORTS, MSG,
@@ -18,6 +19,7 @@ const {
   buildTransferStart, buildTransferAck, buildDone, buildCancel,
   buildPing, buildPong, buildDisconnect,
   buildChunkPacket, buildChunkAck, buildChunkNack,
+  buildClipboardSync,
   parseMessage, parseChunkPacket, parseAckNack,
 } = require('./protocol');
 
@@ -31,6 +33,7 @@ class TransferManager extends EventEmitter {
     this._inboundTransfers = new Map(); // `${sessionId}:${fileId}` → inbound state
     this._outboundTransfers = new Map(); // `${sessionId}:${fileId}` → outbound state
     this.allowControl = true;
+    this._lastClipboardText = '';
   }
 
   // ── Public API ─────────────────────────────────────────────
@@ -41,6 +44,23 @@ class TransferManager extends EventEmitter {
     fs.mkdirSync(this.saveDir, { recursive: true });
 
     this.socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+
+    setInterval(() => {
+      if (this.sessions.size > 0 && this.allowControl) {
+        try {
+          const text = clipboard.readText();
+          if (text && text !== this._lastClipboardText) {
+            this._lastClipboardText = text;
+            const base64 = Buffer.from(text).toString('base64');
+            const msg = buildClipboardSync(base64);
+            console.log(`[Clipboard] Sending new clipboard to Android (${text.length} chars)`);
+            for (const [sid, session] of this.sessions.entries()) {
+              this._send(msg, session.ip, session.port);
+            }
+          }
+        } catch (err) {}
+      }
+    }, 1500);
 
     this.socket.on('error', (err) => {
       console.error('[Transfer] Socket error:', err.message);
@@ -254,6 +274,23 @@ class TransferManager extends EventEmitter {
       case MSG.KEYBOARD_INPUT:
         this.emit('keyboard-input', parsed);
         break;
+      case MSG.CLIPBOARD_SYNC:
+        if (this.allowControl) {
+          try {
+            const text = Buffer.from(parsed.parts[1], 'base64').toString('utf8');
+            console.log(`[Clipboard] Received from Android: ${text.length} chars`);
+            if (text !== this._lastClipboardText) {
+              this._lastClipboardText = text;
+              clipboard.writeText(text);
+              console.log(`[Clipboard] Desktop clipboard updated!`);
+            }
+          } catch (e) {
+            console.error(`[Clipboard] Error decoding:`, e);
+          }
+        }
+        break;
+      default:
+        // Ignore unknowns
     }
   }
 

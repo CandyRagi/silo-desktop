@@ -36,6 +36,7 @@ const MSG = {
   MOUSE_MOVE: 'SILO_MOUSE_MOVE',
   MOUSE_CLICK: 'SILO_MOUSE_CLICK',
   KEYBOARD_INPUT: 'SILO_KEYBOARD_INPUT',
+  CLIPBOARD_SYNC: 'SILO_CLIPBOARD',
 };
 
 const CHUNK_SIZE = 60 * 1024;       // 60 KB data per chunk
@@ -53,6 +54,10 @@ function buildDiscover(desktopName, desktopIP) {
 
 function buildHello(deviceName, deviceIP) {
   return `${MSG.HELLO}|${deviceName}|${deviceIP}|${PORTS.ANDROID}`;
+}
+
+function buildClipboardSync(base64Text) {
+  return `${MSG.CLIPBOARD_SYNC}|${base64Text}`;
 }
 
 function buildPairReq(sessionId, desktopName, pin) {
@@ -161,6 +166,9 @@ function parseMessage(data) {
       case MSG.KEYBOARD_INPUT:
         return { type, sessionId: parts[1], key: decodeURIComponent(parts[2].replace(/\+/g, '%20')) };
 
+      case MSG.CLIPBOARD_SYNC:
+        return { type, parts };
+
       default:
         return null;
     }
@@ -251,6 +259,7 @@ module.exports = {
   buildChunkPacket,
   buildChunkAck,
   buildChunkNack,
+  buildClipboardSync,
   parseMessage,
   parseChunkPacket,
   parseAckNack,
