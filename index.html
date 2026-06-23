@@ -66,6 +66,10 @@
         Transfers
         <span class="nav-badge nav-badge--active" id="active-count-badge" style="display:none">0</span>
       </button>
+      <button class="nav-item" id="nav-camera" onclick="switchTab('camera')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="1.5"/></svg>
+        Camera
+      </button>
       <button class="nav-item" id="nav-audio" onclick="switchTab('audio')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 18v-6a9 9 0 0 1 18 0v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 19a2 2 0 0 1-2 2h-1v-4h3v2zM3 19a2 2 0 0 0 2 2h1v-4H3v2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Audio
@@ -133,6 +137,31 @@
         <p class="empty-desc">Connect to a device and send files, or wait for the Android app to initiate a transfer.</p>
       </div>
       <div id="transfers-list" class="transfers-list"></div>
+    </section>
+
+    <!-- ═══ CAMERA TAB ═══ -->
+    <section class="tab" id="tab-camera">
+      <div class="tab-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h1 class="tab-title">Camera</h1>
+          <p class="tab-subtitle">Live stream from your phone's camera</p>
+        </div>
+        <button class="btn btn--ghost btn--sm" title="Help">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M9 9c0-1.657 1.343-3 3-3s3 1.343 3 3c0 2-3 3-3 3v2m0 4h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <div id="camera-empty" class="empty-state">
+        <div class="empty-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="1.5"/></svg>
+        </div>
+        <h3>No camera stream active</h3>
+        <p>Open "Camera Stream" on your phone's Commands tab to start streaming.</p>
+      </div>
+
+      <div id="camera-stream" style="display:none; width:100%; height:calc(100% - 80px); align-items:center; justify-content:center;">
+        <img id="camera-feed" style="max-width:100%; max-height:100%; border-radius:12px; object-fit:contain;" />
+      </div>
     </section>
 
     <!-- ═══ AUDIO TAB ═══ -->

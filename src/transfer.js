@@ -219,6 +219,16 @@ class TransferManager extends EventEmitter {
   }
 
   _handleRaw(buf, rinfo) {
+    // Try camera frame (binary: "SILO_CAM_FRAME|\n" + JPEG data)
+    const camHeader = 'SILO_CAM_FRAME|\n';
+    const camHeaderBuf = Buffer.from(camHeader, 'utf8');
+    if (buf.length > camHeaderBuf.length && buf.slice(0, camHeaderBuf.length).equals(camHeaderBuf)) {
+      const jpegData = buf.slice(camHeaderBuf.length);
+      const base64 = jpegData.toString('base64');
+      this.emit('camera-frame', base64);
+      return;
+    }
+
     // Try chunk packet first (binary)
     const chunk = parseChunkPacket(buf);
     if (chunk) {

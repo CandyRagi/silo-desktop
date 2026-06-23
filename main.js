@@ -165,6 +165,10 @@ function initServices() {
     }
   });
 
+  transferMgr.on('camera-frame', (base64) => {
+    if (mainWindow) mainWindow.webContents.send('camera-frame', base64);
+  });
+
   transferMgr.start();
 }
 

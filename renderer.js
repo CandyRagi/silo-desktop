@@ -285,6 +285,17 @@ function registerAPIListeners() {
     renderTransfers();
     toast('Transfer cancelled', 'error');
   });
+
+  window.siloAPI.onCameraFrame((base64) => {
+    const img = document.getElementById('camera-feed');
+    const emptyState = document.getElementById('camera-empty');
+    const streamDiv = document.getElementById('camera-stream');
+    if (img) {
+      img.src = 'data:image/jpeg;base64,' + base64;
+      if (emptyState) emptyState.style.display = 'none';
+      if (streamDiv) streamDiv.style.display = 'flex';
+    }
+  });
 }
 
 /* ─── Device Rendering ──────────────────────────────────── */
