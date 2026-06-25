@@ -286,14 +286,31 @@ function registerAPIListeners() {
     toast('Transfer cancelled', 'error');
   });
 
-  window.siloAPI.onCameraFrame((base64) => {
+  let cameraStreamTimeout = null;
+  window.manualRotationOffset = 0;
+  window.lastReportedRotation = 0;
+
+  window.siloAPI.onCameraFrame((data) => {
     const img = document.getElementById('camera-feed');
-    const emptyState = document.getElementById('camera-empty');
-    const streamDiv = document.getElementById('camera-stream');
+    const placeholder = document.getElementById('camera-placeholder');
     if (img) {
-      img.src = 'data:image/jpeg;base64,' + base64;
-      if (emptyState) emptyState.style.display = 'none';
-      if (streamDiv) streamDiv.style.display = 'flex';
+      img.src = 'data:image/jpeg;base64,' + data.base64;
+      window.lastReportedRotation = data.rotation || 0;
+      const finalRotation = (window.lastReportedRotation + window.manualRotationOffset) % 360;
+      img.style.transform = `rotate(${finalRotation}deg) scale(0.97)`;
+      
+      // Re-apply any existing CSS filters that were set before the frame arrived
+      updateCameraFilters();
+
+      img.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
+
+      // Clear the feed if no new frame arrives in 1.5s
+      if (cameraStreamTimeout) clearTimeout(cameraStreamTimeout);
+      cameraStreamTimeout = setTimeout(() => {
+        img.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
+      }, 1500);
     }
   });
 }
@@ -755,3 +772,56 @@ function fileEmoji(name) {
 
 /* ─── Bootstrap ─────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', init);
+
+// Camera Filters
+function updateCameraFilters() {
+  const brightness = document.getElementById('cam-brightness').value;
+  const contrast = document.getElementById('cam-contrast').value;
+  const saturation = document.getElementById('cam-saturation').value;
+  const grayscale = document.getElementById('cam-grayscale').value;
+  
+  const img = document.getElementById('camera-feed');
+  if (img) {
+    // Keep any existing rotation transform, but update the filter
+    const currentTransform = img.style.transform;
+    img.style.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) grayscale(${grayscale}%)`;
+  }
+}
+
+function resetCameraFilters() {
+  document.getElementById('cam-brightness').value = 100;
+  document.getElementById('cam-contrast').value = 100;
+  document.getElementById('cam-saturation').value = 100;
+  document.getElementById('cam-grayscale').value = 0;
+  window.manualRotationOffset = 0;
+  updateCameraFilters();
+}
+
+window.rotateCamera = function() {
+  window.manualRotationOffset = (window.manualRotationOffset + 90) % 360;
+  const img = document.getElementById('camera-feed');
+  if (img) {
+    const finalRotation = (window.lastReportedRotation + window.manualRotationOffset) % 360;
+    img.style.transform = `rotate(${finalRotation}deg) scale(0.97)`;
+  }
+}
+
+// Bind camera filter inputs globally
+window.resetCameraFilters = resetCameraFilters;
+document.addEventListener('DOMContentLoaded', () => {
+  ['brightness', 'contrast', 'saturation', 'grayscale'].forEach(filter => {
+    const el = document.getElementById(`cam-${filter}`);
+    if (el) {
+      el.addEventListener('input', updateCameraFilters);
+    }
+  });
+});
+
+window.copyOBSLink = function() {
+  navigator.clipboard.writeText('http://localhost:18080/stream').then(() => {
+    toast('OBS Link copied to clipboard', 'success');
+  }).catch(err => {
+    toast('Failed to copy link', 'error');
+  });
+};
+

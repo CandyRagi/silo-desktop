@@ -4,7 +4,9 @@
 
 const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('node:path');
-const os   = require('os');
+const fs = require('fs');
+const os = require('os');
+const http = require('http');
 
 const DiscoveryService = require('./src/discovery');
 const TransferManager  = require('./src/transfer');
@@ -15,7 +17,6 @@ let discovery     = null;
 let transferMgr   = null;
 
 // ── History Management ─────────────────────────────────────
-const fs = require('fs');
 const historyPath = path.join(app.getPath('userData'), 'history.json');
 
 function loadHistory() {
@@ -165,8 +166,50 @@ function initServices() {
     }
   });
 
-  transferMgr.on('camera-frame', (base64) => {
-    if (mainWindow) mainWindow.webContents.send('camera-frame', base64);
+  // OBS HTTP Server
+  const obsClients = new Set();
+  const obsServer = http.createServer((req, res) => {
+    if (req.url === '/stream') {
+      res.writeHead(200, {
+        'Content-Type': 'multipart/x-mixed-replace; boundary=--siloobsboundary',
+        'Cache-Control': 'no-cache',
+        'Connection': 'close',
+        'Pragma': 'no-cache'
+      });
+      obsClients.add(res);
+      res.on('close', () => {
+        obsClients.delete(res);
+      });
+    } else {
+      res.writeHead(404);
+      res.end('Not found. Use /stream for MJPEG feed.');
+    }
+  });
+
+  obsServer.listen(18080, '0.0.0.0', () => {
+    console.log('[OBS] Local broadcast server listening on http://localhost:18080/stream');
+  });
+
+  transferMgr.on('camera-frame', (data) => {
+    if (mainWindow) mainWindow.webContents.send('camera-frame', data);
+    
+    // Send to OBS clients
+    if (data.raw && obsClients.size > 0) {
+      const boundary = '--siloobsboundary\r\n';
+      const headers = `Content-Type: image/jpeg\r\nContent-Length: ${data.raw.length}\r\n\r\n`;
+      const footer = '\r\n';
+      
+      const chunk = Buffer.concat([
+        Buffer.from(boundary),
+        Buffer.from(headers),
+        data.raw,
+        Buffer.from(footer)
+      ]);
+
+      for (const res of obsClients) {
+        res.write(chunk);
+      }
+    }
   });
 
   transferMgr.start();
