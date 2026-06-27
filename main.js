@@ -212,6 +212,10 @@ function initServices() {
     }
   });
 
+  transferMgr.on('screen-frame', (data) => {
+    if (mainWindow) mainWindow.webContents.send('screen-frame', data);
+  });
+
   transferMgr.start();
 }
 

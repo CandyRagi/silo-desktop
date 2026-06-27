@@ -305,13 +305,35 @@ function registerAPIListeners() {
       img.style.display = 'block';
       if (placeholder) placeholder.style.display = 'none';
 
-      // Clear the feed if no new frame arrives in 1.5s
-      if (cameraStreamTimeout) clearTimeout(cameraStreamTimeout);
+      clearTimeout(cameraStreamTimeout);
       cameraStreamTimeout = setTimeout(() => {
         img.style.display = 'none';
         if (placeholder) placeholder.style.display = 'block';
-      }, 1500);
+      }, 500);
     }
+  });
+
+  let screenStreamTimeout = null;
+
+  window.siloAPI.onScreenFrame((data) => {
+    const img = document.getElementById('screen-feed');
+    const placeholder = document.getElementById('screen-placeholder');
+    if (img) {
+      img.src = 'data:image/jpeg;base64,' + data.base64;
+      
+      img.style.display = 'block';
+      if (placeholder) placeholder.style.display = 'none';
+
+      clearTimeout(screenStreamTimeout);
+      screenStreamTimeout = setTimeout(() => {
+        img.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
+      }, 2000);
+    }
+  });
+
+  // History update
+  window.siloAPI.onHistoryUpdate((history) => {
   });
 }
 

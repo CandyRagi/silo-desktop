@@ -219,10 +219,16 @@ class TransferManager extends EventEmitter {
   }
 
   _handleRaw(buf, rinfo) {
-    // Try camera frame (binary: "SILO_CAM_FRAME|<rotation>|\n" + JPEG data)
+    // Try camera or screen frame (binary: "SILO_CAM_FRAME|<rotation>|\n" + JPEG data)
     const camPrefix = 'SILO_CAM_FRAME|';
+    const screenPrefix = 'SILO_SCREEN_FRAME|';
     const camPrefixBuf = Buffer.from(camPrefix, 'utf8');
-    if (buf.length > camPrefixBuf.length && buf.slice(0, camPrefixBuf.length).equals(camPrefixBuf)) {
+    const screenPrefixBuf = Buffer.from(screenPrefix, 'utf8');
+    
+    if (
+      (buf.length > camPrefixBuf.length && buf.slice(0, camPrefixBuf.length).equals(camPrefixBuf)) ||
+      (buf.length > screenPrefixBuf.length && buf.slice(0, screenPrefixBuf.length).equals(screenPrefixBuf))
+    ) {
       const newlineIdx = buf.indexOf('\n');
       if (newlineIdx !== -1) {
         const headerStr = buf.slice(0, newlineIdx).toString('utf8');
@@ -232,6 +238,14 @@ class TransferManager extends EventEmitter {
           const jpegData = buf.slice(newlineIdx + 1);
           const base64 = jpegData.toString('base64');
           this.emit('camera-frame', { base64, rotation, raw: jpegData });
+          return;
+        }
+
+        if (parts[0] === MSG.SCREEN_FRAME) {
+          const rotation = parseInt(parts[1]) || 0;
+          const jpegData = buf.slice(newlineIdx + 1);
+          const base64 = jpegData.toString('base64');
+          this.emit('screen-frame', { base64, rotation, raw: jpegData });
           return;
         }
       }

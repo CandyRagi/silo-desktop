@@ -47,6 +47,7 @@ contextBridge.exposeInMainWorld('siloAPI', {
   onTransferCancelled: (cb) => ipcRenderer.on('transfer-cancelled',  (_e, d) => cb(d)),
   onScanTimeout:       (cb) => ipcRenderer.on('scan-timeout',        ()      => cb()),
   onCameraFrame:       (cb) => ipcRenderer.on('camera-frame',         (_e, d) => cb(d)),
+  onScreenFrame:       (cb) => ipcRenderer.on('screen-frame',         (_e, d) => cb(d)),
 
   // ── Cleanup ───────────────────────────────────────────────
   removeAllListeners: (channel) => ipcRenderer.removeAllListeners(channel),
