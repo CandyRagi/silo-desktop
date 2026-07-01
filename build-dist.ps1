@@ -99,11 +99,12 @@ Write-Host "You can now open 'Silo' from your Desktop or Start Menu." -Foregroun
 "@
 
 $installerScript | Out-File -FilePath "$distDir/install.ps1" -Encoding utf8
+Copy-Item "$appDir/uninstall.ps1" $distDir
 
 # 7. Zip the package
 Write-Host "[+] Packaging setup into ZIP archive..." -ForegroundColor Green
 Set-Location $distDir
-Compress-Archive -Path "Silo", "install.ps1" -DestinationPath "$distDir/Silo-Windows-Setup.zip" -Force
+Compress-Archive -Path "Silo", "install.ps1", "uninstall.ps1" -DestinationPath "$distDir/Silo-Windows-Setup.zip" -Force
 
 Write-Host ""
 Write-Host "=============================================" -ForegroundColor Cyan
