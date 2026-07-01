@@ -12,7 +12,9 @@
   "license": "ISC",
   "devDependencies": {
     "electron": "^41.7.1",
-    "electron-packager": "^17.1.2"
+    "electron-packager": "^17.1.2",
+    "jimp": "^1.6.1",
+    "png-to-ico": "^3.0.1"
   },
   "dependencies": {
     "@nut-tree-fork/nut-js": "^4.2.6"

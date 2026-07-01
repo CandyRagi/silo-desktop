@@ -36,6 +36,7 @@ Copy-Item "$appDir/preload.js" $resourcesAppDir
 Copy-Item "$appDir/renderer.js" $resourcesAppDir
 Copy-Item "$appDir/styles.css" $resourcesAppDir
 Copy-Item "$appDir/icon.png" $resourcesAppDir
+Copy-Item "$appDir/icon.ico" $buildDir
 Copy-Item "$appDir/package.json" $resourcesAppDir
 Copy-Item -Recurse "$appDir/src" $resourcesAppDir
 
@@ -81,7 +82,7 @@ Write-Host "[+] Creating Desktop and Start Menu Shortcuts..." -ForegroundColor G
 `$Shortcut = `$WshShell.CreateShortcut(`$ShortcutPath)
 `$Shortcut.TargetPath = "`$installFolder\Silo.exe"
 `$Shortcut.WorkingDirectory = `$installFolder
-`$Shortcut.IconLocation = "`$installFolder\icon.png"
+`$Shortcut.IconLocation = "`$installFolder\icon.ico"
 `$Shortcut.Save()
 
 # Start Menu Shortcut
@@ -89,7 +90,7 @@ Write-Host "[+] Creating Desktop and Start Menu Shortcuts..." -ForegroundColor G
 `$Shortcut = `$WshShell.CreateShortcut(`$StartMenuPath)
 `$Shortcut.TargetPath = "`$installFolder\Silo.exe"
 `$Shortcut.WorkingDirectory = `$installFolder
-`$Shortcut.IconLocation = "`$installFolder\icon.png"
+`$Shortcut.IconLocation = "`$installFolder\icon.ico"
 `$Shortcut.Save()
 
 Write-Host "[+] Installation completed successfully!" -ForegroundColor Green
