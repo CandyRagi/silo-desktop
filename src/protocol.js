@@ -119,7 +119,7 @@ function parseMessage(data) {
         return { type, desktopName: parts[1], desktopIP: parts[2], desktopPort: parseInt(parts[3]) };
 
       case MSG.HELLO:
-        return { type, deviceName: parts[1], deviceIP: parts[2], androidPort: parseInt(parts[3]) };
+        return { type, deviceName: parts[4] && parts[4].trim() !== '' ? parts[4] : parts[1], deviceIP: parts[2], androidPort: parseInt(parts[3]) };
 
       case MSG.PAIR_REQ:
         return { type, sessionId: parts[1], desktopName: parts[2], pin: parts[3] };

@@ -308,18 +308,20 @@ function registerAPIListeners() {
       clearTimeout(cameraStreamTimeout);
       cameraStreamTimeout = setTimeout(() => {
         img.style.display = 'none';
-        if (placeholder) placeholder.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'flex';
       }, 500);
     }
   });
 
   let screenStreamTimeout = null;
+  window.screenRotationOffset = 0;
 
   window.siloAPI.onScreenFrame((data) => {
     const img = document.getElementById('screen-feed');
     const placeholder = document.getElementById('screen-placeholder');
     if (img) {
       img.src = 'data:image/jpeg;base64,' + data.base64;
+      img.style.transform = `rotate(${window.screenRotationOffset}deg) scale(0.97)`;
       
       img.style.display = 'block';
       if (placeholder) placeholder.style.display = 'none';
@@ -327,7 +329,7 @@ function registerAPIListeners() {
       clearTimeout(screenStreamTimeout);
       screenStreamTimeout = setTimeout(() => {
         img.style.display = 'none';
-        if (placeholder) placeholder.style.display = 'block';
+        if (placeholder) placeholder.style.display = 'flex';
       }, 2000);
     }
   });
@@ -419,41 +421,36 @@ function deviceCardHTML(device) {
   else                 { statusClass = 'online';    statusLabel = 'Available'; }
 
   const forgetBtn = wasSaved && !connected
-    ? `<button class="btn btn--ghost btn--sm btn--icon" title="Forget device" onclick="forgetDevice('${device.ip}')"
-         style="color:var(--text-muted);padding:0 8px">✕</button>`
+    ? `<button class="btn btn--ghost btn--sm btn--icon forget-btn" title="Forget device" onclick="forgetDevice('${device.ip}')">✕</button>`
     : '';
 
   const opacityStyle = (wasSaved && !isLive && !connected) ? 'opacity: 0.5; filter: grayscale(0.5);' : '';
+  const initial = device.name ? device.name.charAt(0).toUpperCase() : '?';
 
   return `
-    <div style="${opacityStyle} display: flex; flex-direction: column; gap: 16px;">
-      <div class="device-card-top">
-        <div class="device-card-icon">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-            <rect x="5" y="2" width="14" height="20" rx="2" stroke="currentColor" stroke-width="1.5"/>
-            <circle cx="12" cy="18" r="1" fill="currentColor"/>
-          </svg>
+    <div class="device-card-inner" style="${opacityStyle}">
+      <div class="device-card-header">
+        <div class="device-avatar-large">
+          ${initial}
         </div>
         <div class="device-card-info">
           <div class="device-card-name">${escHtml(device.name)}</div>
           <div class="device-card-ip">${device.ip}</div>
         </div>
-        <div style="display:flex;align-items:center;gap:6px">
+        <div class="device-status-wrap">
           <div class="device-status-dot ${statusClass}" title="${statusLabel}"></div>
           ${forgetBtn}
         </div>
       </div>
       <div class="device-card-actions">
         ${connected
-          ? `<button class="btn btn--ghost btn--sm" style="flex:1" onclick="pickAndSend('${device.ip}')">
-               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          ? `<button class="btn btn--primary btn--sm" style="flex:1; border-radius: 20px;" onclick="pickAndSend('${device.ip}')">
                Send File
              </button>
-             <button class="btn btn--danger btn--sm" onclick="disconnectDevice('${device.ip}')">
+             <button class="btn btn--danger btn--sm" style="flex:1; border-radius: 20px; background: transparent; color: var(--red); border: 1px solid rgba(239,68,68,0.3);" onclick="disconnectDevice('${device.ip}')">
                Disconnect
              </button>`
-          : `<button class="btn btn--primary btn--sm" style="flex:1" onclick="openPairModal('${device.ip}')" ${!isLive ? 'disabled' : ''}>
-               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 11V7a4 4 0 018 0v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          : `<button class="btn btn--primary btn--sm" style="flex:1; border-radius: 20px;" onclick="openPairModal('${device.ip}')" ${!isLive ? 'disabled' : ''}>
                Connect
              </button>`
         }
@@ -802,10 +799,19 @@ function updateCameraFilters() {
   const saturation = document.getElementById('cam-saturation').value;
   const grayscale = document.getElementById('cam-grayscale').value;
   
+  // Update UI value labels
+  const bLabel = document.getElementById('val-cam-brightness');
+  if (bLabel) bLabel.textContent = `${brightness}%`;
+  const cLabel = document.getElementById('val-cam-contrast');
+  if (cLabel) cLabel.textContent = `${contrast}%`;
+  const sLabel = document.getElementById('val-cam-saturation');
+  if (sLabel) sLabel.textContent = `${saturation}%`;
+  const gLabel = document.getElementById('val-cam-grayscale');
+  if (gLabel) gLabel.textContent = `${grayscale}%`;
+
   const img = document.getElementById('camera-feed');
   if (img) {
     // Keep any existing rotation transform, but update the filter
-    const currentTransform = img.style.transform;
     img.style.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) grayscale(${grayscale}%)`;
   }
 }
@@ -827,6 +833,37 @@ window.rotateCamera = function() {
     img.style.transform = `rotate(${finalRotation}deg) scale(0.97)`;
   }
 }
+
+// Screen Settings
+window.updateScreenScaleMode = function(mode) {
+  const img = document.getElementById('screen-feed');
+  if (img) {
+    img.style.objectFit = mode;
+    if (mode === 'cover') {
+      img.style.width = '100%';
+      img.style.height = '100%';
+    } else {
+      img.style.width = '';
+      img.style.height = '';
+    }
+  }
+};
+
+window.updateScreenRotation = function(rot) {
+  window.screenRotationOffset = parseInt(rot, 10) || 0;
+  const img = document.getElementById('screen-feed');
+  if (img) {
+    img.style.transform = `rotate(${window.screenRotationOffset}deg) scale(0.97)`;
+  }
+};
+
+window.copyScreenOBSLink = function() {
+  navigator.clipboard.writeText('http://localhost:18080/screen').then(() => {
+    toast('Screen Stream URL copied to clipboard', 'success');
+  }).catch(err => {
+    toast('Failed to copy link', 'error');
+  });
+};
 
 // Bind camera filter inputs globally
 window.resetCameraFilters = resetCameraFilters;

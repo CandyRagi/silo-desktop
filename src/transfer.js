@@ -332,14 +332,12 @@ class TransferManager extends EventEmitter {
     if (!pending) return;
 
     clearTimeout(pending.timer);
+    clearInterval(pending.retryInterval);
     this._pendingPairReqs.delete(sessionId);
 
     // Register session — always use the phone's fixed transfer port, not the ephemeral sender port
     const session = { ip: rinfo.address, port: PORTS.ANDROID, sessionId, lastPing: Date.now() };
     this.sessions.set(sessionId, session);
-
-    // Clear the re-send interval
-    clearInterval(pending.retryInterval);
 
     console.log(`[Transfer] Paired! Session ${sessionId} with ${rinfo.address}`);
     this.emit('device-connected', { sessionId, ip: rinfo.address, port: PORTS.ANDROID });
@@ -358,6 +356,7 @@ class TransferManager extends EventEmitter {
     const pending = this._pendingPairReqs.get(sessionId);
     if (!pending) return;
     clearTimeout(pending.timer);
+    clearInterval(pending.retryInterval);
     this._pendingPairReqs.delete(sessionId);
     console.log(`[Transfer] Pairing denied (${reason}) from ${rinfo.address}`);
     pending.reject(new Error(reason === 'wrong_pin' ? 'Incorrect PIN' : 'Pairing rejected by device'));

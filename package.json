@@ -1,16 +1,18 @@
 {
   "name": "silo-desktop",
   "version": "1.0.0",
-  "description": "",
+  "description": "Fast local file transfer and remote control over UDP",
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "package": "electron-packager . Silo --platform=win32 --arch=x64 --out=dist --overwrite --icon=icon.png"
   },
   "keywords": [],
-  "author": "",
+  "author": "CandyRagi",
   "license": "ISC",
   "devDependencies": {
-    "electron": "^41.7.1"
+    "electron": "^41.7.1",
+    "electron-packager": "^17.1.2"
   },
   "dependencies": {
     "@nut-tree-fork/nut-js": "^4.2.6"

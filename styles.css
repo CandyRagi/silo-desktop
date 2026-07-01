@@ -135,7 +135,7 @@ html, body {
 .scan-dot {
   width: 7px; height: 7px;
   border-radius: 50%;
-  background: var(--text-muted);
+  background: var(--amber);
   transition: background 0.3s;
 }
 .scan-dot.scanning {
@@ -344,61 +344,72 @@ html, body {
 }
 
 .device-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 18px;
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  background: linear-gradient(145deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
   cursor: default;
   position: relative;
   overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  backdrop-filter: blur(10px);
 }
 .device-card::before {
   content: '';
   position: absolute;
-  top: 0; left: 0; right: 0; height: 1px;
+  top: 0; left: 0; right: 0; height: 2px;
   background: var(--accent-grad);
   opacity: 0;
   transition: opacity 0.3s;
 }
-@keyframes spin { 100% { transform: rotate(360deg); } }
-.device-card:hover { border-color: var(--border-accent); box-shadow: var(--shadow-card); transform: translateY(-2px); }
+.device-card:hover { 
+  border-color: rgba(255,255,255,0.1); 
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2), 0 0 20px rgba(99,102,241,0.1); 
+  transform: translateY(-4px); 
+}
 .device-card:hover::before { opacity: 1; }
-.device-card.connected { border-color: rgba(34,197,94,0.3); }
+.device-card.connected { border-color: rgba(34,197,94,0.3); background: linear-gradient(145deg, rgba(34,197,94,0.05), rgba(0,0,0,0)); }
 .device-card.connecting { border-color: var(--border-accent); animation: connecting-pulse 1s ease-in-out infinite alternate; }
 
-@keyframes connecting-pulse {
-  from { box-shadow: 0 0 0 rgba(99,102,241,0); }
-  to   { box-shadow: 0 0 16px rgba(99,102,241,0.3); }
+.device-card-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-.device-card-top { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
-.device-card-icon {
-  width: 44px; height: 44px;
-  border-radius: var(--radius-md);
+.device-card-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.device-avatar-large {
+  width: 52px; height: 52px;
+  border-radius: 50%;
   background: linear-gradient(135deg, rgba(99,102,241,0.2), rgba(167,139,250,0.1));
   border: 1px solid var(--border-accent);
   display: flex; align-items: center; justify-content: center;
   color: var(--accent);
+  font-size: 22px;
+  font-weight: 600;
   flex-shrink: 0;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.05);
 }
-.device-card-info { flex: 1; min-width: 0; }
-.device-card-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.device-card-ip   { font-size: 11px; color: var(--text-muted); font-family: monospace; margin-top: 2px; }
 
-.device-status-badge {
-  padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+.device-card-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.device-card-name { font-weight: 600; font-size: 16px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -0.01em; }
+.device-card-ip   { font-size: 12px; color: var(--text-muted); font-family: 'SF Mono', Consolas, monospace; }
+
+.device-status-wrap {
+  display: flex; align-items: center; gap: 8px; align-self: flex-start; margin-top: 4px;
 }
-.device-status-badge.online { background: rgba(34,197,94,0.15); color: #4ade80; }
-.device-status-badge.connecting { background: rgba(99,102,241,0.15); color: #818cf8; }
-.device-status-badge.connected { background: rgba(34,197,94,0.2); color: #4ade80; }
-.device-status-badge.saved { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
 
 .device-status-dot {
   width: 10px; height: 10px; border-radius: 50%;
 }
-.device-status-dot.online { background: #4ade80; box-shadow: 0 0 5px rgba(74, 222, 128, 0.5); }
-.device-status-dot.connected { background: #818cf8; box-shadow: 0 0 5px rgba(129, 140, 248, 0.5); }
+.device-status-dot.online { background: #4ade80; box-shadow: 0 0 8px rgba(74, 222, 128, 0.4); }
+.device-status-dot.connected { background: #818cf8; box-shadow: 0 0 8px rgba(129, 140, 248, 0.4); }
 .device-status-dot.saved { background: #fbbf24; }
 
 .btn-scan-scanning { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; border: none; }
@@ -407,7 +418,12 @@ html, body {
 .btn-scan-idle { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; }
 .btn-scan-idle:hover { filter: brightness(1.1); box-shadow: 0 4px 20px rgba(16,185,129,0.4); transform: translateY(-1px); }
 
-.device-card-actions { display: flex; gap: 8px; }
+.forget-btn {
+  color: var(--text-muted); padding: 4px; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+}
+.forget-btn:hover { background: rgba(255,255,255,0.1); color: var(--text-primary); }
+
+.device-card-actions { display: flex; gap: 12px; }
 
 /* Drop zone highlight */
 .device-card.drop-target { border-color: var(--accent); background: rgba(99,102,241,0.08); }
@@ -778,4 +794,115 @@ html, body {
 .sleek-slider::-webkit-slider-thumb:active {
   transform: scale(0.9);
   box-shadow: none;
+}
+
+/* ─── Stream Layout System (Camera & Screen Share) ─── */
+.stream-layout {
+  display: flex;
+  flex: 1;
+  height: calc(100vh - var(--titlebar-h) - 68px);
+  overflow: hidden;
+  background: var(--bg-deep);
+}
+
+.stream-viewport {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.2);
+  overflow: hidden;
+  padding: 24px;
+}
+
+.stream-img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius-lg);
+  object-fit: contain;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.05);
+  display: none;
+  transition: transform 0.2s ease, filter 0.1s ease;
+}
+
+.stream-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  background: var(--bg-base);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  overflow-y: auto;
+  border-left: 1px solid var(--border);
+}
+
+.sidebar-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sidebar-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.stream-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.stream-info-label {
+  color: var(--text-secondary);
+}
+
+.stream-info-value {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-family: 'SF Mono', Consolas, monospace;
+}
+
+.stream-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stream-control-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.stream-control-value {
+  color: var(--text-primary);
+}
+
+/* Adjust Empty State when inside Stream Viewport */
+.stream-viewport .empty-state {
+  position: relative;
+  top: auto;
+  left: auto;
+  transform: none;
+  background: transparent;
+  border: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  padding: 0;
+  max-width: 320px;
 }

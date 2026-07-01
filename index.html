@@ -49,7 +49,7 @@
         <span id="scan-label">Idle</span>
       </div>
 
-      <button id="btn-scan" class="btn btn--primary btn--full" onclick="toggleDiscovery()">
+      <button id="btn-scan" class="btn btn-scan-idle btn--full" onclick="toggleDiscovery()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="8" stroke="currentColor" stroke-width="2"/><path d="M21 21l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
         Scan for Devices
       </button>
@@ -73,10 +73,6 @@
       <button class="nav-item" id="nav-screen" onclick="switchTab('screen')">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2" stroke-width="2"/><path d="M8 20v2m8-2v2" stroke-width="2" stroke-linecap="round"/></svg>
         Screen Share
-      </button>
-      <button class="nav-item" id="nav-audio" onclick="switchTab('audio')">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M3 18v-6a9 9 0 0 1 18 0v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 19a2 2 0 0 1-2 2h-1v-4h3v2zM3 19a2 2 0 0 0 2 2h1v-4H3v2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        Audio
       </button>
       <button class="nav-item" id="nav-history" onclick="switchTab('history')">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -145,108 +141,170 @@
 
     <!-- ═══ CAMERA TAB ═══ -->
     <section class="tab" id="tab-camera">
-      <div class="tab-header" style="display:flex; justify-content:space-between; align-items:center;">
+
+
+      <div class="tab-header">
         <div>
-          <h1 class="tab-title">Camera</h1>
-          <p class="tab-subtitle">Live stream from your phone's camera</p>
+          <h1 class="tab-title">Camera Feed</h1>
+          <p class="tab-subtitle">Live high-performance viewfinder streaming over UDP</p>
         </div>
-        <button class="btn btn--ghost btn--sm" title="Help">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M9 9c0-1.657 1.343-3 3-3s3 1.343 3 3c0 2-3 3-3 3v2m0 4h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </button>
       </div>
 
-      <div id="camera-container" style="width:100%; height:calc(100% - 80px); display:flex; flex-direction:column; align-items:center; justify-content:center; gap: 20px; padding: 20px 0; background: radial-gradient(circle at center, rgba(129, 140, 248, 0.03) 0%, transparent 60%);">
-        <div style="flex: 1; min-height: 0; width: 95%; max-width: 1200px; max-height: 85vh; display:flex; align-items:center; justify-content:center; background: transparent; border-radius: 12px; padding: 8px; position: relative; overflow: hidden;">
-          <!-- Premium Placeholder (visible by default) -->
+      <div class="stream-layout">
+        <!-- Viewport -->
+        <div class="stream-viewport">
           <div id="camera-placeholder" class="empty-state">
-            <svg width="56" height="56" viewBox="0 0 24 24" fill="none">
-              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="12" cy="13" r="4" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-            <h2 class="empty-title">Camera Disconnected</h2>
-            <p class="empty-desc">Open Silo on your Android device and navigate to the Camera stream to cast your lens here.</p>
+            <div class="empty-icon">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+            <h2 class="empty-title">Camera Offline</h2>
+            <p class="empty-desc">Open the Camera section on the Silo app on your phone to initiate connection.</p>
           </div>
-          <!-- Actual Video Feed (hidden until data arrives) -->
-          <img id="camera-feed" style="display:none; position: absolute; max-width:100%; max-height:100%; border-radius:12px; object-fit:contain; transition: filter 0.1s; filter: drop-shadow(0 12px 48px rgba(129, 140, 248, 0.25));" />
+          <img id="camera-feed" class="stream-img" />
         </div>
-        
-        <!-- Controls (always visible) -->
-        <div class="camera-controls" style="width: 80%; max-width: 500px; background: var(--bg-secondary); padding: 20px; border-radius: 16px; border: 1px solid var(--border-color); display:flex; flex-direction:column; gap: 15px;">
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label style="font-size: 14px; font-weight: 500; color: var(--text-secondary); width: 25%;">Brightness</label>
-            <input type="range" id="cam-brightness" min="0" max="200" value="100" class="sleek-slider">
+
+        <!-- Sidebar -->
+        <div class="stream-sidebar">
+          <div class="sidebar-card">
+            <div class="sidebar-card-title">Device Info</div>
+            <div class="stream-info-row">
+              <span class="stream-info-label">Feed Quality</span>
+              <span class="stream-info-value" style="color: var(--green);">Optimal</span>
+            </div>
+            <div class="stream-info-row">
+              <span class="stream-info-label">FPS</span>
+              <span class="stream-info-value" id="camera-fps">15 Hz</span>
+            </div>
+            <div class="stream-info-row">
+              <span class="stream-info-label">Format</span>
+              <span class="stream-info-value">Motion JPEG</span>
+            </div>
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label style="font-size: 14px; font-weight: 500; color: var(--text-secondary); width: 25%;">Contrast</label>
-            <input type="range" id="cam-contrast" min="0" max="200" value="100" class="sleek-slider">
+
+          <div class="sidebar-card">
+            <div class="sidebar-card-title">Adjustments</div>
+            <div class="stream-control-group">
+              <div class="stream-control-label">
+                <span>Brightness</span>
+                <span class="stream-control-value" id="val-cam-brightness">100%</span>
+              </div>
+              <input type="range" id="cam-brightness" min="0" max="200" value="100" class="sleek-slider" style="width: 100%">
+            </div>
+            <div class="stream-control-group">
+              <div class="stream-control-label">
+                <span>Contrast</span>
+                <span class="stream-control-value" id="val-cam-contrast">100%</span>
+              </div>
+              <input type="range" id="cam-contrast" min="0" max="200" value="100" class="sleek-slider" style="width: 100%">
+            </div>
+            <div class="stream-control-group">
+              <div class="stream-control-label">
+                <span>Saturation</span>
+                <span class="stream-control-value" id="val-cam-saturation">100%</span>
+              </div>
+              <input type="range" id="cam-saturation" min="0" max="200" value="100" class="sleek-slider" style="width: 100%">
+            </div>
+            <div class="stream-control-group">
+              <div class="stream-control-label">
+                <span>Grayscale</span>
+                <span class="stream-control-value" id="val-cam-grayscale">0%</span>
+              </div>
+              <input type="range" id="cam-grayscale" min="0" max="100" value="0" class="sleek-slider" style="width: 100%">
+            </div>
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label style="font-size: 14px; font-weight: 500; color: var(--text-secondary); width: 25%;">Saturation</label>
-            <input type="range" id="cam-saturation" min="0" max="200" value="100" class="sleek-slider">
+
+          <div class="sidebar-card">
+            <div class="sidebar-card-title">Actions</div>
+            <button class="btn btn--primary btn--full" onclick="rotateCamera()">Rotate Viewport</button>
+            <button class="btn btn--secondary btn--full" onclick="resetCameraFilters()">Reset Filters</button>
+            <button class="btn btn--ghost btn--full" onclick="copyOBSLink()">Copy OBS Source URL</button>
+            <p style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 4px; line-height: 1.4;">Add <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px; font-family: monospace;">http://localhost:18080/stream</code> as a browser source in OBS.</p>
           </div>
-          <div style="display:flex; justify-content:space-between; align-items:center;">
-            <label style="font-size: 14px; font-weight: 500; color: var(--text-secondary); width: 25%;">Grayscale</label>
-            <input type="range" id="cam-grayscale" min="0" max="100" value="0" class="sleek-slider">
-          </div>
-          <div style="display:flex; justify-content:center; gap: 10px; margin-top: 5px;">
-            <button class="btn btn--secondary" onclick="rotateCamera()">Rotate 90°</button>
-            <button class="btn btn--secondary" onclick="resetCameraFilters()">Reset</button>
-            <button class="btn btn--primary" onclick="copyOBSLink()">Copy OBS Link</button>
-          </div>
-          <p style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: -5px;">Add <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px;">http://localhost:18080/stream</code> as a Media/Browser Source in OBS</p>
         </div>
       </div>
     </section>
 
     <!-- ═══ SCREEN SHARE TAB ═══ -->
     <section class="tab" id="tab-screen">
-      <div class="tab-header" style="display:flex; justify-content:space-between; align-items:center;">
+      <div class="tab-header">
         <div>
           <h1 class="tab-title">Screen Share</h1>
-          <p class="tab-subtitle">Live stream your phone's screen</p>
+          <p class="tab-subtitle">High-fidelity mirror of your mobile display</p>
         </div>
-        <button class="btn btn--ghost btn--sm" title="Help">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M9 9c0-1.657 1.343-3 3-3s3 1.343 3 3c0 2-3 3-3 3v2m0 4h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </button>
       </div>
-      <div id="screen-container" style="width:100%; height:calc(100% - 80px); display:flex; flex-direction:column; align-items:center; justify-content:center; gap: 20px; padding: 20px 0; background: radial-gradient(circle at center, rgba(129, 140, 248, 0.03) 0%, transparent 60%);">
-        <div style="flex: 1; min-height: 0; width: 95%; max-width: 1200px; max-height: 85vh; display:flex; align-items:center; justify-content:center; background: transparent; border-radius: 12px; padding: 8px; position: relative; overflow: hidden; margin-bottom: 10px;">
-          <!-- Premium Placeholder (visible by default) -->
-          <div id="screen-placeholder" style="display:flex; flex-direction:column; align-items:center; justify-content:center; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 40px 32px; border-radius: 20px; backdrop-filter: blur(10px); text-align: center;">
-            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" style="color: #818cf8; opacity: 0.8; margin-bottom: 16px; filter: drop-shadow(0 0 12px rgba(129, 140, 248, 0.4));">
-              <rect x="3" y="4" width="18" height="16" rx="3" stroke="currentColor" stroke-width="1.5"/>
-              <path d="M3 15h18M8 20v2m8-2v2M9 22h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <circle cx="12" cy="10" r="2" stroke="currentColor" stroke-width="1.5"/>
-            </svg>
-            <h2 style="color: #fff; font-size: 18px; font-weight: 600; margin: 0 0 8px 0; letter-spacing: -0.2px;">Ready to Cast</h2>
-            <p style="color: rgba(255,255,255,0.5); font-size: 14px; margin: 0; max-width: 250px; line-height: 1.5;">Open Silo on your Android device and tap Start Sharing to cast your screen directly here.</p>
+
+      <div class="stream-layout">
+        <!-- Viewport -->
+        <div class="stream-viewport">
+          <div id="screen-placeholder" class="empty-state">
+            <div class="empty-icon">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="3"/>
+                <path d="M3 15h18M8 20v2m8-2v2M9 22h6"/>
+                <circle cx="12" cy="10" r="2"/>
+              </svg>
+            </div>
+            <h2 class="empty-title">Ready to Cast</h2>
+            <p class="empty-desc">Tap "Screen Share" on your phone app to cast your mobile display here.</p>
           </div>
-          <!-- Actual Screen Feed (hidden until data arrives) -->
-          <img id="screen-feed" src="" style="display:none; position: absolute; max-width:100%; max-height:100%; border-radius:12px; object-fit:contain; transition: filter 0.1s; filter: drop-shadow(0 12px 48px rgba(129, 140, 248, 0.25));" />
+          <img id="screen-feed" class="stream-img" />
+        </div>
+
+        <!-- Sidebar -->
+        <div class="stream-sidebar">
+          <div class="sidebar-card">
+            <div class="sidebar-card-title">Stream Status</div>
+            <div class="stream-info-row">
+              <span class="stream-info-label">Frame Rate</span>
+              <span class="stream-info-value" id="screen-fps">15 Hz</span>
+            </div>
+            <div class="stream-info-row">
+              <span class="stream-info-label">Latency</span>
+              <span class="stream-info-value" style="color: var(--green);">&lt; 16ms</span>
+            </div>
+            <div class="stream-info-row">
+              <span class="stream-info-label">Protocol</span>
+              <span class="stream-info-value">UDP / JPEG</span>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="sidebar-card-title">Settings</div>
+            <div class="stream-control-group">
+              <div class="stream-control-label">
+                <span>Scaling Mode</span>
+              </div>
+              <select id="screen-scale-mode" onchange="updateScreenScaleMode(this.value)" style="width: 100%; padding: 8px; border-radius: var(--radius-md); background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-primary); outline: none;">
+                <option value="contain">Fit to Window (Contain)</option>
+                <option value="cover">Stretch Fill (Cover)</option>
+              </select>
+            </div>
+            <div class="stream-control-group" style="margin-top: 8px;">
+              <div class="stream-control-label">
+                <span>Display Rotation</span>
+              </div>
+              <select id="screen-rotate" onchange="updateScreenRotation(this.value)" style="width: 100%; padding: 8px; border-radius: var(--radius-md); background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-primary); outline: none;">
+                <option value="0">Auto Rotate</option>
+                <option value="90">90° Clockwise</option>
+                <option value="180">180°</option>
+                <option value="270">270° Counter-Clockwise</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="sidebar-card">
+            <div class="sidebar-card-title">Integration</div>
+            <button class="btn btn--primary btn--full" onclick="copyScreenOBSLink()">Copy Stream URL</button>
+            <p style="font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 4px; line-height: 1.4;">Add <code style="background: rgba(0,0,0,0.2); padding: 2px 4px; border-radius: 4px; font-family: monospace;">http://localhost:18080/screen</code> as a browser source in OBS.</p>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- ═══ AUDIO TAB ═══ -->
-    <section class="tab" id="tab-audio">
-      <div class="tab-header" style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <h1 class="tab-title">Audio</h1>
-          <p class="tab-subtitle">Stream and control audio between your devices</p>
-        </div>
-        <button class="btn btn--ghost btn--sm" title="Help">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M9 9c0-1.657 1.343-3 3-3s3 1.343 3 3c0 2-3 3-3 3v2m0 4h.01" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        </button>
-      </div>
 
-      <div class="empty-state">
-        <div class="empty-icon">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none"><path d="M3 18v-6a9 9 0 0 1 18 0v6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 19a2 2 0 0 1-2 2h-1v-4h3v2zM3 19a2 2 0 0 0 2 2h1v-4H3v2z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </div>
-        <h3>Audio streaming coming soon</h3>
-        <p>This feature will allow you to route PC audio to your phone, or phone audio to your PC.</p>
-      </div>
-    </section>
 
     <!-- ═══ HISTORY TAB ═══ -->
     <section class="tab" id="tab-history">

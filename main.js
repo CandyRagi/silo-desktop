@@ -168,6 +168,7 @@ function initServices() {
 
   // OBS HTTP Server
   const obsClients = new Set();
+  const screenClients = new Set();
   const obsServer = http.createServer((req, res) => {
     if (req.url === '/stream') {
       res.writeHead(200, {
@@ -180,9 +181,20 @@ function initServices() {
       res.on('close', () => {
         obsClients.delete(res);
       });
+    } else if (req.url === '/screen') {
+      res.writeHead(200, {
+        'Content-Type': 'multipart/x-mixed-replace; boundary=--siloscreenboundary',
+        'Cache-Control': 'no-cache',
+        'Connection': 'close',
+        'Pragma': 'no-cache'
+      });
+      screenClients.add(res);
+      res.on('close', () => {
+        screenClients.delete(res);
+      });
     } else {
       res.writeHead(404);
-      res.end('Not found. Use /stream for MJPEG feed.');
+      res.end('Not found. Use /stream for MJPEG camera feed, or /screen for screen share feed.');
     }
   });
 
@@ -214,6 +226,24 @@ function initServices() {
 
   transferMgr.on('screen-frame', (data) => {
     if (mainWindow) mainWindow.webContents.send('screen-frame', data);
+
+    // Send to Screen clients
+    if (data.raw && screenClients.size > 0) {
+      const boundary = '--siloscreenboundary\r\n';
+      const headers = `Content-Type: image/jpeg\r\nContent-Length: ${data.raw.length}\r\n\r\n`;
+      const footer = '\r\n';
+
+      const chunk = Buffer.concat([
+        Buffer.from(boundary),
+        Buffer.from(headers),
+        data.raw,
+        Buffer.from(footer)
+      ]);
+
+      for (const res of screenClients) {
+        res.write(chunk);
+      }
+    }
   });
 
   transferMgr.start();
