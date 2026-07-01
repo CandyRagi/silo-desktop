@@ -1,8 +1,20 @@
-// ═══════════════════════════════════════════════════════════
-// Silo Desktop — Renderer Process
-// ═══════════════════════════════════════════════════════════
+/**
+ * File: renderer.js
+ * Purpose: Renderer process logic. Handles UI interactions, state management, and updates DOM based on IPC events.
+ * Functions:
+ * - loadSavedDevices(), saveDeviceRecord(device), forgetDeviceRecord(ip): Local storage management.
+ * - init(), restoreSavedDevices(): Initialization logic.
+ * - toggleDiscovery(), refreshDiscovery(), startDiscovery(), updateScanLabel(), setScanState(): Discovery UI logic.
+ * - registerAPIListeners(): IPC event listeners setup.
+ * - addOrUpdateDevice(device), renderDeviceCard(device), createDeviceCard(device), deviceCardHTML(device), updateDeviceCard(device): Device UI rendering.
+ * - openPairModal(deviceIP), _startCountdown(seconds), startPairing(), closePairModal(), showPinError(msg): Pairing UI logic.
+ * - pickAndSend(deviceIP), sendFile(filePath, sessionId), disconnectDevice(deviceIP), forgetDevice(ip): File and session actions.
+ * - renderTransfers(), transferItemHTML(t, key), updateTransferProgress(key, t), updateTransferBadge(): Transfer UI logic.
+ * - renderHistory(), clearHistory(): History UI logic.
+ * - changeSaveDir(), openSaveDir(), toggleAllowControl(checked): Settings UI logic.
+ * - switchTab(name), toast(msg, type, onClick), escHtml(str), formatBytes(bytes), formatTime(ts), fileEmoji(name), updateCameraFilters(): Helpers.
+ */
 
-/* ─── Persistent Device Store ─────────────────────────────── */
 const SAVED_DEVICES_KEY = 'silo_saved_devices';
 
 function loadSavedDevices() {
@@ -26,16 +38,14 @@ function forgetDeviceRecord(ip) {
   updateDeviceCountBadge();
 }
 
-/* ─── State ─────────────────────────────────────────────── */
 const state = {
   scanning:    false,
-  devices:     new Map(),  // ip → device
-  transfers:   new Map(),  // `sessionId:fileId` → transfer
+  devices:     new Map(),  
+  transfers:   new Map(),  
   history:     [],
-  pendingPair: null,  // { ip, port, name }
+  pendingPair: null,  
 };
 
-/* ─── Init ──────────────────────────────────────────────── */
 async function init() {
   const hostname = await window.siloAPI.getHostname();
   document.getElementById('desktop-name').textContent = hostname;
@@ -49,18 +59,15 @@ async function init() {
   window.siloAPI.setAllowControl(allowControl);
 
   registerAPIListeners();
-  
-  // Restore previously connected devices before scanning
+
   restoreSavedDevices();
 
-  // Load persisted history
   const savedHistory = await window.siloAPI.getHistory();
   if (savedHistory && savedHistory.length > 0) {
     state.history = savedHistory;
     renderHistory();
   }
 
-  // Initialize scan button state (auto-scan disabled per user request)
   setScanState(false);
 }
 
@@ -74,7 +81,6 @@ function restoreSavedDevices() {
   updateDeviceCountBadge();
 }
 
-/* ─── Discovery ─────────────────────────────────────────── */
 let discoveryRunning = false;
 let _scanCountdownTimer = null;
 
@@ -129,8 +135,7 @@ async function startDiscovery() {
   await window.siloAPI.startDiscovery();
   discoveryRunning = true;
   setScanState(true);
-  
-  // 30s auto-stop
+
   let remaining = 30;
   clearInterval(_scanCountdownTimer);
   _scanCountdownTimer = setInterval(() => {
@@ -173,12 +178,11 @@ function setScanState(scanning) {
   }
 }
 
-// 2s auto-refresh to downgrade "Available" devices to "Last Seen" if they stop broadcasting
 setInterval(() => {
   let changed = false;
   const now = Date.now();
   for (const [ip, dev] of state.devices.entries()) {
-    // If not connected and we haven't seen it in >6s, downgrade its lastSeen status
+    
     if (!dev.connected && dev.lastSeen && (now - dev.lastSeen > 6000)) {
       dev.lastSeen = null;
       changed = true;
@@ -192,7 +196,6 @@ setInterval(() => {
   updateScanLabel();
 }, 2000);
 
-/* ─── IPC Event Listeners ───────────────────────────────── */
 function registerAPIListeners() {
   window.siloAPI.onDeviceFound((device) => {
     addOrUpdateDevice(device);
@@ -218,7 +221,7 @@ function registerAPIListeners() {
     }
     toast(`Connected to ${dev?.name || info.ip}`, 'success');
     updateScanDot();
-    // Stop scanning as soon as we have a connection
+    
     if (discoveryRunning) {
       clearInterval(_scanCountdownTimer);
       discoveryRunning = false;
@@ -298,8 +301,7 @@ function registerAPIListeners() {
       window.lastReportedRotation = data.rotation || 0;
       const finalRotation = (window.lastReportedRotation + window.manualRotationOffset) % 360;
       img.style.transform = `rotate(${finalRotation}deg) scale(0.97)`;
-      
-      // Re-apply any existing CSS filters that were set before the frame arrived
+
       updateCameraFilters();
 
       img.style.display = 'block';
@@ -334,19 +336,12 @@ function registerAPIListeners() {
     }
   });
 
-  // History update
   window.siloAPI.onHistoryUpdate((history) => {
   });
 }
 
-/* ─── Device Rendering ──────────────────────────────────── */
-
-/**
- * Upsert a device into state + DOM.
- * ALWAYS checks DOM by element ID first — never creates duplicate cards.
- */
 function addOrUpdateDevice(device) {
-  // Merge incoming fields over existing state (preserve connected/sessionId)
+  
   const existing = state.devices.get(device.ip);
   const merged = { ...existing, ...device };
   state.devices.set(device.ip, merged);
@@ -358,10 +353,10 @@ function addOrUpdateDevice(device) {
 
   const cardId = `device-${device.ip.replace(/\./g, '-')}`;
   if (document.getElementById(cardId)) {
-    // Card already exists — just refresh its content
+    
     updateDeviceCard(merged);
   } else {
-    // Brand new card
+    
     const card = createDeviceCard(merged);
     grid.appendChild(card);
   }
@@ -369,7 +364,6 @@ function addOrUpdateDevice(device) {
   updateDeviceCountBadge();
 }
 
-/** Create and insert a card for a device that isn't in the DOM yet. */
 function renderDeviceCard(device) {
   const grid  = document.getElementById('devices-grid');
   const empty = document.getElementById('devices-empty');
@@ -389,7 +383,6 @@ function createDeviceCard(device) {
   div.id = id;
   div.innerHTML = deviceCardHTML(device);
 
-  // Drag & drop for sending files
   div.addEventListener('dragover', (e) => {
     if (!device.connected) return;
     e.preventDefault();
@@ -411,8 +404,8 @@ function createDeviceCard(device) {
 function deviceCardHTML(device) {
   const dev       = state.devices.get(device.ip) || device;
   const connected = dev.connected || device.connected;
-  const isLive    = dev.lastSeen != null;          // seen in current scan
-  const wasSaved  = !!loadSavedDevices()[device.ip]; // was connected before
+  const isLive    = dev.lastSeen != null;          
+  const wasSaved  = !!loadSavedDevices()[device.ip]; 
 
   let statusClass, statusLabel;
   if (connected)       { statusClass = 'connected'; statusLabel = 'Connected'; }
@@ -486,7 +479,6 @@ function updateScanDot() {
   }
 }
 
-/* ─── PIN Modal ─────────────────────────────────────────── */
 let _countdownTimer = null;
 
 function openPairModal(deviceIP) {
@@ -502,7 +494,7 @@ function openPairModal(deviceIP) {
     }
   }
 
-  const pin = "000000"; // Dummy PIN for protocol compatibility
+  const pin = "000000"; 
   state.pendingPair = { ip: device.ip, port: device.port, name: device.name, pin };
 
   document.getElementById('modal-device-name').textContent = device.name;
@@ -538,7 +530,6 @@ async function startPairing() {
 
   clearInterval(_countdownTimer);
 
-  // Modal may have been closed by Cancel while waiting
   if (!state.pendingPair) return;
 
   if (result.ok) {
@@ -554,7 +545,7 @@ async function startPairing() {
   } else {
     document.getElementById('pair-btn-text').textContent = 'Timed out';
     showPinError(result.error || 'Phone did not respond in time');
-    // Swap Cancel → Retry
+    
     const cancelBtn = document.getElementById('btn-pair-cancel');
     cancelBtn.textContent = 'Retry';
     cancelBtn.onclick = () => openPairModal(state.pendingPair?.ip ?? ip);
@@ -574,7 +565,6 @@ function showPinError(msg) {
   el.style.display = 'flex';
 }
 
-/* ─── File Sending ──────────────────────────────────────── */
 async function pickAndSend(deviceIP) {
   const dev = state.devices.get(deviceIP);
   if (!dev?.connected) { toast('Device not connected', 'error'); return; }
@@ -615,7 +605,6 @@ function forgetDevice(ip) {
   toast('Device forgotten', 'info');
 }
 
-/* ─── Transfers Rendering ───────────────────────────────── */
 function renderTransfers() {
   const list  = document.getElementById('transfers-list');
   const empty = document.getElementById('transfers-empty');
@@ -687,7 +676,6 @@ function updateTransferBadge() {
   badge.style.display = count > 0 ? 'inline-flex' : 'none';
 }
 
-/* ─── History Rendering ─────────────────────────────────── */
 function renderHistory() {
   const list  = document.getElementById('history-list');
   const empty = document.getElementById('history-empty');
@@ -726,7 +714,6 @@ function clearHistory() {
   renderHistory();
 }
 
-/* ─── Settings ──────────────────────────────────────────── */
 async function changeSaveDir() {
   const result = await window.siloAPI.setSaveDir();
   if (result.ok) {
@@ -744,7 +731,6 @@ function toggleAllowControl(checked) {
   window.siloAPI.setAllowControl(checked);
 }
 
-/* ─── Tab Navigation ────────────────────────────────────── */
 function switchTab(name) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -752,7 +738,6 @@ function switchTab(name) {
   document.getElementById(`nav-${name}`)?.classList.add('active');
 }
 
-/* ─── Toast System ──────────────────────────────────────── */
 function toast(msg, type = 'info', onClick) {
   const icons = { success: '✓', error: '✕', info: 'ℹ' };
   const container = document.getElementById('toast-container');
@@ -768,7 +753,6 @@ function toast(msg, type = 'info', onClick) {
   }, 4000);
 }
 
-/* ─── Helpers ───────────────────────────────────────────── */
 function escHtml(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
@@ -789,17 +773,14 @@ function fileEmoji(name) {
   return `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="color:var(--text-muted)"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>`;
 }
 
-/* ─── Bootstrap ─────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', init);
 
-// Camera Filters
 function updateCameraFilters() {
   const brightness = document.getElementById('cam-brightness').value;
   const contrast = document.getElementById('cam-contrast').value;
   const saturation = document.getElementById('cam-saturation').value;
   const grayscale = document.getElementById('cam-grayscale').value;
-  
-  // Update UI value labels
+
   const bLabel = document.getElementById('val-cam-brightness');
   if (bLabel) bLabel.textContent = `${brightness}%`;
   const cLabel = document.getElementById('val-cam-contrast');
@@ -811,7 +792,7 @@ function updateCameraFilters() {
 
   const img = document.getElementById('camera-feed');
   if (img) {
-    // Keep any existing rotation transform, but update the filter
+    
     img.style.filter = `brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) grayscale(${grayscale}%)`;
   }
 }
@@ -834,7 +815,6 @@ window.rotateCamera = function() {
   }
 }
 
-// Screen Settings
 window.updateScreenScaleMode = function(mode) {
   const img = document.getElementById('screen-feed');
   if (img) {
@@ -865,7 +845,6 @@ window.copyScreenOBSLink = function() {
   });
 };
 
-// Bind camera filter inputs globally
 window.resetCameraFilters = resetCameraFilters;
 document.addEventListener('DOMContentLoaded', () => {
   ['brightness', 'contrast', 'saturation', 'grayscale'].forEach(filter => {

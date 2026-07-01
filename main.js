@@ -1,6 +1,15 @@
-// ═══════════════════════════════════════════════════════════
-// Silo Desktop — Electron Main Process
-// ═══════════════════════════════════════════════════════════
+/**
+ * File: main.js
+ * Purpose: Electron main process. Initializes the app, window, tray, and IPC services.
+ * Functions:
+ * - loadHistory(): Loads transfer history from disk.
+ * - saveHistoryItem(item): Saves a new transfer history item.
+ * - clearHistoryFile(): Deletes the history file.
+ * - createWindow(): Creates the main BrowserWindow.
+ * - createTray(): Creates the system tray icon and menu.
+ * - initServices(): Initializes Discovery and Transfer services and sets up event forwarding.
+ * - registerIPC(): Registers IPC handlers for renderer communication.
+ */
 
 const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu } = require('electron');
 const path = require('node:path');
@@ -18,7 +27,6 @@ let transferMgr   = null;
 let tray          = null;
 let isQuitting    = false;
 
-// ── History Management ─────────────────────────────────────
 const historyPath = path.join(app.getPath('userData'), 'history.json');
 
 function loadHistory() {
@@ -48,8 +56,6 @@ function clearHistoryFile() {
     if (fs.existsSync(historyPath)) fs.unlinkSync(historyPath);
   } catch (err) {}
 }
-
-// ── Window ─────────────────────────────────────────────────
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -111,13 +117,10 @@ function createTray() {
   });
 }
 
-// ── Services ───────────────────────────────────────────────
-
 function initServices() {
   discovery   = new DiscoveryService();
   transferMgr = new TransferManager();
 
-  // Forward discovery events to renderer
   discovery.on('device-found', (device) => {
     mainWindow?.webContents.send('device-found', device);
   });
@@ -128,13 +131,12 @@ function initServices() {
     mainWindow?.webContents.send('scan-timeout');
   });
 
-  // Forward transfer events to renderer
   transferMgr.on('device-connected', (info) => {
     discovery.markConnected(info.ip, info.sessionId);
     mainWindow?.webContents.send('device-connected', info);
   });
   transferMgr.on('device-disconnected', (info) => {
-    // Find IP for this session and mark disconnected
+    
     for (const dev of discovery.getDevices()) {
       if (dev.sessionId === info.sessionId) discovery.markDisconnected(dev.ip);
     }
@@ -162,14 +164,12 @@ function initServices() {
     mainWindow?.webContents.send('transfer-cancelled', info);
   });
 
-  // Mouse Control Events
   transferMgr.on('mouse-move', async (info) => {
     if (!transferMgr.allowControl) return;
     try {
-      // nut-js moves mouse relative to current position, or we calculate absolute
-      // The phone sends dx/dy as floats. Multiply by a sensitivity factor if needed.
+
       const current = await mouse.getPosition();
-      // Increase sensitivity to make the trackpad feel natural
+      
       const sensitivity = 2.0;
       await mouse.setPosition(new Point(current.x + info.dx * sensitivity, current.y + info.dy * sensitivity));
     } catch (err) {
@@ -190,7 +190,6 @@ function initServices() {
     }
   });
 
-  // Keyboard Control Events
   transferMgr.on('keyboard-input', async (info) => {
     if (!transferMgr.allowControl) return;
     try {
@@ -206,7 +205,6 @@ function initServices() {
     }
   });
 
-  // OBS HTTP Server
   const obsClients = new Set();
   const screenClients = new Set();
   const obsServer = http.createServer((req, res) => {
@@ -244,8 +242,7 @@ function initServices() {
 
   transferMgr.on('camera-frame', (data) => {
     if (mainWindow) mainWindow.webContents.send('camera-frame', data);
-    
-    // Send to OBS clients
+
     if (data.raw && obsClients.size > 0) {
       const boundary = '--siloobsboundary\r\n';
       const headers = `Content-Type: image/jpeg\r\nContent-Length: ${data.raw.length}\r\n\r\n`;
@@ -267,7 +264,6 @@ function initServices() {
   transferMgr.on('screen-frame', (data) => {
     if (mainWindow) mainWindow.webContents.send('screen-frame', data);
 
-    // Send to Screen clients
     if (data.raw && screenClients.size > 0) {
       const boundary = '--siloscreenboundary\r\n';
       const headers = `Content-Type: image/jpeg\r\nContent-Length: ${data.raw.length}\r\n\r\n`;
@@ -289,11 +285,8 @@ function initServices() {
   transferMgr.start();
 }
 
-// ── IPC Handlers ───────────────────────────────────────────
-
 function registerIPC() {
 
-  // Discovery
   ipcMain.handle('start-discovery', () => {
     discovery.start();
     return { ok: true };
@@ -313,7 +306,6 @@ function registerIPC() {
     return { ok: true };
   });
 
-  // Pairing
   ipcMain.handle('connect-device', async (_event, { ip, port, pin }) => {
     try {
       const sessionId = await transferMgr.pairDevice(ip, port, os.hostname(), pin);
@@ -328,7 +320,6 @@ function registerIPC() {
     return { ok: true };
   });
 
-  // File sending
   ipcMain.handle('send-file', async (_event, { filePath, sessionId }) => {
     try {
       await transferMgr.sendFile(filePath, sessionId);
@@ -338,7 +329,6 @@ function registerIPC() {
     }
   });
 
-  // File picker dialog
   ipcMain.handle('pick-files', async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
       properties: ['openFile', 'multiSelections'],
@@ -347,7 +337,6 @@ function registerIPC() {
     return result.canceled ? [] : result.filePaths;
   });
 
-  // Save directory
   ipcMain.handle('get-save-dir', () => transferMgr.getSaveDir());
 
   ipcMain.handle('set-save-dir', async () => {
@@ -360,7 +349,6 @@ function registerIPC() {
     return transferMgr.getSaveDir();
   });
 
-  // Open saved file location
   ipcMain.handle('open-save-dir', async () => {
     await shell.openPath(transferMgr.getSaveDir());
   });
@@ -384,7 +372,6 @@ function registerIPC() {
     shell.showItemInFolder(filePath);
   });
 
-  // Window controls (frameless)
   ipcMain.on('window-minimize', () => mainWindow?.minimize());
   ipcMain.on('window-maximize', () => {
     if (mainWindow?.isMaximized()) mainWindow.unmaximize();
@@ -392,12 +379,9 @@ function registerIPC() {
   });
   ipcMain.on('window-close', () => mainWindow?.close());
 
-  // App info
   ipcMain.handle('get-hostname', () => os.hostname());
   ipcMain.handle('get-local-ip', () => discovery?._getLocalIP() ?? '—');
 }
-
-// ── App Lifecycle ──────────────────────────────────────────
 
 app.whenReady().then(() => {
   createWindow();
@@ -421,7 +405,7 @@ app.on('before-quit', () => {
 app.on('window-all-closed', () => {
   discovery?.stop();
   transferMgr?.stop();
-  // Delay app.quit() to allow UDP DISCONNECT packets to reach the network interface
+  
   setTimeout(() => {
     if (process.platform !== 'darwin') app.quit();
   }, 100);

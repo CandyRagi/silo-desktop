@@ -1,8 +1,18 @@
-// ═══════════════════════════════════════════════════════════
-// Silo Transfer Manager
-// Handles pairing (with PIN) and UDP file transfer with
-// a sliding-window reliability layer.
-// ═══════════════════════════════════════════════════════════
+/**
+ * File: transfer.js
+ * Purpose: TransferManager class for handling device pairing, file transfers, and remote control over UDP.
+ * Functions:
+ * - start(), stop(): Lifecycle and socket binding.
+ * - setSaveDir(dir), getSaveDir(), setAllowControl(allow): Accessors.
+ * - pairDevice(...): Starts pairing flow.
+ * - sendFile(filePath, sessionId): Reads a file and sends it over UDP in chunks.
+ * - disconnectSession(sessionId): Closes an active session.
+ * - _send(msgStr, ip, port), _handleRaw(buf, rinfo), _handleChunk(), _handlePairAck(), etc.: Socket IO handlers.
+ * - _startKeepalive(sessionId): Starts ping loop.
+ * - _sendChunkWithRetry(...): Sends a UDP chunk and awaits ACK.
+ * - _waitForEvent(...): Promisifies EventEmitter.
+ * - _assembleFile(transfer), _safeFilename(name), _uniquePath(p): File reconstruction logic.
+ */
 
 const dgram  = require('dgram');
 const fs     = require('fs');
@@ -27,16 +37,14 @@ class TransferManager extends EventEmitter {
   constructor() {
     super();
     this.socket      = null;
-    this.sessions    = new Map();   // sessionId → session object
+    this.sessions    = new Map();   
     this.saveDir     = path.join(os.homedir(), 'Downloads', 'Silo');
-    this._pendingPairReqs = new Map(); // sessionId → { resolve, reject, timer }
-    this._inboundTransfers = new Map(); // `${sessionId}:${fileId}` → inbound state
-    this._outboundTransfers = new Map(); // `${sessionId}:${fileId}` → outbound state
+    this._pendingPairReqs = new Map(); 
+    this._inboundTransfers = new Map(); 
+    this._outboundTransfers = new Map(); 
     this.allowControl = true;
     this._lastClipboardText = '';
   }
-
-  // ── Public API ─────────────────────────────────────────────
 
   start() {
     if (this.socket) return;
@@ -78,7 +86,7 @@ class TransferManager extends EventEmitter {
 
   stop() {
     if (this.socket) {
-      // Gracefully disconnect all sessions before closing socket
+      
       for (const [sessionId, session] of this.sessions.entries()) {
         try {
           const buf = Buffer.from(buildDisconnect(sessionId), 'utf8');
@@ -86,7 +94,7 @@ class TransferManager extends EventEmitter {
           console.log(`[Transfer] Sent DISCONNECT to session ${sessionId} before stopping`);
         } catch (_) {}
       }
-      // Delay closing the socket to give OS time to flush UDP buffers
+      
       const sock = this.socket;
       setTimeout(() => { try { sock.close(); } catch (_) {} }, 100);
       this.socket = null;
@@ -105,26 +113,17 @@ class TransferManager extends EventEmitter {
 
   setAllowControl(allow) {
     this.allowControl = allow;
-    // Notify all active sessions
+    
     for (const [sessionId, session] of this.sessions.entries()) {
       this._send(`SILO_CTRL_ALLOW|${sessionId}|${allow}`, session.ip, session.port);
     }
   }
 
-  /**
-   * Initiate pairing with an Android device.
-   * Returns a Promise that resolves with sessionId on success,
-   * or rejects with an error message.
-   */
   pairDevice(deviceIP, devicePort, desktopName, pin) {
     return new Promise((resolve, reject) => {
       const sessionId = crypto.randomUUID();
       const msg = buildPairReq(sessionId, desktopName, pin, PORTS.DESKTOP);
 
-      // Send immediately, then re-send every 5 s so that if the phone
-      // sends PAIR_ACK a few seconds after we first sent PAIR_REQ, we
-      // don't miss the reply window. The phone ignores duplicate PAIR_REQs
-      // once it already has a pending request shown on screen.
       this._send(msg, deviceIP, devicePort);
       console.log(`[Transfer] Pairing request sent to ${deviceIP}:${devicePort} (session ${sessionId})`);
 
@@ -138,16 +137,12 @@ class TransferManager extends EventEmitter {
         clearInterval(retryInterval);
         this._pendingPairReqs.delete(sessionId);
         reject(new Error('Pairing timed out — did you enter the code on the phone?'));
-      }, 90000);  // 90 s — user needs time to read and type the 6-digit code
+      }, 90000);  
 
       this._pendingPairReqs.set(sessionId, { resolve, reject, timer, retryInterval });
     });
   }
 
-  /**
-   * Send a file to a connected session.
-   * Returns a Promise that resolves when transfer is complete.
-   */
   async sendFile(filePath, sessionId) {
     const session = this.sessions.get(sessionId);
     if (!session) throw new Error(`No active session: ${sessionId}`);
@@ -160,20 +155,17 @@ class TransferManager extends EventEmitter {
 
     const key = `${sessionId}:${fileId}`;
 
-    // Announce the transfer
     const startMsg = buildTransferStart(sessionId, fileId, fileName, fileSize, totalChunks, '');
     this._send(startMsg, session.ip, session.port);
 
-    // Wait for TRANSFER_ACK
     await this._waitForEvent(`xfer-ack:${key}`, 8000);
 
-    // Open file
     const fd = fs.openSync(filePath, 'r');
     const buf = Buffer.allocUnsafe(CHUNK_SIZE);
 
     try {
       for (let i = 0; i < totalChunks; ) {
-        // Build window
+        
         const windowEnd = Math.min(i + WINDOW_SIZE, totalChunks);
         const ackSet = new Set();
 
@@ -208,8 +200,6 @@ class TransferManager extends EventEmitter {
     }
   }
 
-  // ── Internal ───────────────────────────────────────────────
-
   _send(msgStr, ip, port) {
     if (!this.socket) return;
     const buf = Buffer.isBuffer(msgStr) ? msgStr : Buffer.from(msgStr, 'utf8');
@@ -219,7 +209,7 @@ class TransferManager extends EventEmitter {
   }
 
   _handleRaw(buf, rinfo) {
-    // Try camera or screen frame (binary: "SILO_CAM_FRAME|<rotation>|\n" + JPEG data)
+    
     const camPrefix = 'SILO_CAM_FRAME|';
     const screenPrefix = 'SILO_SCREEN_FRAME|';
     const camPrefixBuf = Buffer.from(camPrefix, 'utf8');
@@ -251,21 +241,18 @@ class TransferManager extends EventEmitter {
       }
     }
 
-    // Try chunk packet first (binary)
     const chunk = parseChunkPacket(buf);
     if (chunk) {
       this._handleChunk(chunk, rinfo);
       return;
     }
 
-    // Try ACK/NACK
     const ackNack = parseAckNack(buf);
     if (ackNack) {
       this.emit(`chunk-ack:${ackNack.sessionId}:${ackNack.fileId}:${ackNack.chunkIndex}`, ackNack);
       return;
     }
 
-    // Try text message
     const parsed = parseMessage(buf);
     if (!parsed) return;
 
@@ -322,7 +309,7 @@ class TransferManager extends EventEmitter {
         }
         break;
       default:
-        // Ignore unknowns
+        
     }
   }
 
@@ -335,19 +322,16 @@ class TransferManager extends EventEmitter {
     clearInterval(pending.retryInterval);
     this._pendingPairReqs.delete(sessionId);
 
-    // Register session — always use the phone's fixed transfer port, not the ephemeral sender port
     const session = { ip: rinfo.address, port: PORTS.ANDROID, sessionId, lastPing: Date.now() };
     this.sessions.set(sessionId, session);
 
     console.log(`[Transfer] Paired! Session ${sessionId} with ${rinfo.address}`);
     this.emit('device-connected', { sessionId, ip: rinfo.address, port: PORTS.ANDROID });
-    
-    // Send initial allow control state
+
     this._send(`SILO_CTRL_ALLOW|${sessionId}|${this.allowControl}`, rinfo.address, PORTS.ANDROID);
     
     pending.resolve(sessionId);
 
-    // Start keepalive
     this._startKeepalive(sessionId);
   }
 
@@ -372,7 +356,7 @@ class TransferManager extends EventEmitter {
 
     this._inboundTransfers.set(key, {
       sessionId, fileId, fileName, fileSize, totalChunks, mimeType,
-      receivedChunks: new Map(),   // chunkIndex → Buffer
+      receivedChunks: new Map(),   
       outputPath: outPath,
       startTime: Date.now(),
     });
@@ -380,7 +364,6 @@ class TransferManager extends EventEmitter {
     console.log(`[Transfer] Incoming: ${fileName} (${totalChunks} chunks) from ${rinfo.address}`);
     this.emit('transfer-incoming', { sessionId, fileId, fileName, fileSize, totalChunks });
 
-    // ACK
     const ack = buildTransferAck(sessionId, fileId);
     this._send(ack, session.ip, session.port);
   }
@@ -396,7 +379,6 @@ class TransferManager extends EventEmitter {
 
     transfer.receivedChunks.set(chunkIndex, Buffer.from(data));
 
-    // Send ACK
     const ack = buildChunkAck(sessionId, fileId, chunkIndex);
     this._send(ack, session.ip, session.port);
 
@@ -419,7 +401,6 @@ class TransferManager extends EventEmitter {
 
     this._inboundTransfers.delete(key);
 
-    // Check for missing chunks
     const missing = [];
     for (let i = 0; i < transfer.totalChunks; i++) {
       if (!transfer.receivedChunks.has(i)) missing.push(i);
@@ -427,7 +408,7 @@ class TransferManager extends EventEmitter {
 
     if (missing.length > 0) {
       console.warn(`[Transfer] Missing ${missing.length} chunks for ${transfer.fileName}`);
-      // Request missing chunks via NACK
+      
       const session = this.sessions.get(sessionId);
       if (session) {
         for (const idx of missing) {
@@ -438,7 +419,6 @@ class TransferManager extends EventEmitter {
       return;
     }
 
-    // Reassemble
     this._assembleFile(transfer);
   }
 
@@ -453,7 +433,7 @@ class TransferManager extends EventEmitter {
     const session = this.sessions.get(parsed.sessionId);
     if (!session) return;
     session.lastPing = Date.now();
-    // Always reply to the phone's fixed transfer port (41236), not the ephemeral rinfo.port
+    
     this._send(buildPong(parsed.sessionId), session.ip, PORTS.ANDROID);
   }
 
@@ -505,7 +485,7 @@ class TransferManager extends EventEmitter {
         ackSet.add(chunkIndex);
         return;
       } catch (_) {
-        // Timeout — retransmit
+        
         console.warn(`[Transfer] Chunk ${chunkIndex} timeout, retry ${attempt + 1}`);
       }
     }
@@ -532,7 +512,6 @@ class TransferManager extends EventEmitter {
   _assembleFile(transfer) {
     const { outputPath, fileName, fileSize, totalChunks, receivedChunks, sessionId, fileId } = transfer;
 
-    // Ensure unique filename
     const finalPath = this._uniquePath(outputPath);
 
     const ws = fs.createWriteStream(finalPath);

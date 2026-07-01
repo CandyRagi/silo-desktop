@@ -1,8 +1,6 @@
-/* ═══════════════════════════════════════════════════════════
-   Silo Desktop — Premium Dark UI
-   ═══════════════════════════════════════════════════════════ */
+/* File: styles.css
+Purpose: Contains all styling rules for the desktop application. */
 
-/* ── Reset & Base ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -54,13 +52,13 @@ html, body {
   user-select: none;
 }
 
-/* ── Scrollbar ── */
+
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
-/* ═══════════════════ TITLEBAR ═══════════════════ */
+
 .titlebar {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -88,14 +86,14 @@ html, body {
 .mac-min { background-color: #ffbd2e; }
 .mac-max { background-color: #27c93f; }
 
-/* ═══════════════════ APP SHELL ═══════════════════ */
+
 .app-shell {
   display: flex;
   height: 100vh;
   padding-top: var(--titlebar-h);
 }
 
-/* ═══════════════════ SIDEBAR ═══════════════════ */
+
 .sidebar {
   width: var(--sidebar-w);
   flex-shrink: 0;
@@ -149,7 +147,7 @@ html, body {
   50%       { opacity: 0.5; transform: scale(0.7); }
 }
 
-/* ── Sidebar Nav ── */
+
 .sidebar-nav {
   flex: 1;
   padding: 10px 8px;
@@ -196,7 +194,7 @@ html, body {
 .sidebar-footer { padding: 12px 14px; border-top: 1px solid var(--border); }
 .app-version { font-size: 11px; color: var(--text-muted); }
 
-/* ═══════════════════ CONTENT ═══════════════════ */
+
 .content {
   flex: 1;
   overflow: hidden;
@@ -223,7 +221,7 @@ html, body {
 .tab-title { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
 .tab-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
 
-/* ═══════════════════ BUTTONS ═══════════════════ */
+
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   padding: 8px 16px;
@@ -265,7 +263,7 @@ html, body {
 }
 .btn--danger:hover { background: rgba(239,68,68,0.25); }
 
-/* ═══════════════════ EMPTY STATE ═══════════════════ */
+
 .empty-state {
   position: absolute;
   top: 50%;
@@ -332,7 +330,7 @@ html, body {
 .empty-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
 .empty-desc  { font-size: 12px; max-width: 300px; line-height: 1.6; }
 
-/* ═══════════════════ DEVICES GRID ═══════════════════ */
+
 .devices-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -425,7 +423,7 @@ html, body {
 
 .device-card-actions { display: flex; gap: 12px; }
 
-/* Drop zone highlight */
+
 .device-card.drop-target { border-color: var(--accent); background: rgba(99,102,241,0.08); }
 .device-card.drop-target::after {
   content: 'Drop to send';
@@ -437,7 +435,7 @@ html, body {
   pointer-events: none;
 }
 
-/* ═══════════════════ TRANSFERS LIST ═══════════════════ */
+
 .transfers-list, .history-list {
   flex: 1;
   overflow-y: auto;
@@ -515,7 +513,7 @@ html, body {
   margin-top: 6px;
 }
 
-/* History item (completed) */
+
 .history-item {
   background: var(--bg-surface);
   border: 1px solid var(--border);
@@ -537,14 +535,14 @@ html, body {
 .history-item-reveal:hover { color: var(--text-primary); }
 
 .history-send {
-  border-left: 3px solid #4ade80; /* Green */
+  border-left: 3px solid #4ade80; 
 }
 
 .history-receive {
-  border-left: 3px solid #facc15; /* Yellow */
+  border-left: 3px solid #facc15; 
 }
 
-/* ═══════════════════ SETTINGS ═══════════════════ */
+
 .settings-list { padding: 24px 28px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; }
 .settings-card {
   background: var(--bg-surface);
@@ -568,7 +566,7 @@ html, body {
 .settings-value { font-size: 12px; color: var(--text-secondary); margin-top: 2px; font-family: monospace; }
 .settings-actions { display: flex; gap: 8px; flex-shrink: 0; }
 
-/* ═══════════════════ TOGGLE SWITCH ═══════════════════ */
+
 .toggle-switch {
   position: relative;
   display: inline-block;
@@ -609,7 +607,7 @@ html, body {
   background-color: #fff;
 }
 
-/* ═══════════════════ PIN MODAL ═══════════════════ */
+
 .modal-overlay {
   position: fixed; inset: 0;
   background: rgba(0,0,0,0.7);
@@ -673,7 +671,7 @@ html, body {
 .pin-digit.filled { border-color: rgba(99,102,241,0.5); }
 .pin-digit.error  { border-color: var(--red); box-shadow: 0 0 0 2px rgba(239,68,68,0.2); animation: shake 0.3s ease; }
 
-/* Read-only PIN display tile (desktop shows the code) */
+
 .pin-digit--display {
   display: flex; align-items: center; justify-content: center;
   border-color: var(--border-accent);
@@ -708,7 +706,7 @@ html, body {
 
 .modal-footer { display: flex; justify-content: flex-end; gap: 10px; }
 
-/* ═══════════════════ SPINNER ═══════════════════ */
+
 .spinner {
   width: 14px; height: 14px;
   border: 2px solid rgba(255,255,255,0.3);
@@ -719,7 +717,7 @@ html, body {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 
-/* ═══════════════════ TOAST ═══════════════════ */
+
 .toast-container {
   position: fixed;
   bottom: 20px; right: 20px;
@@ -754,12 +752,12 @@ html, body {
 }
 .toast.leaving { animation: toast-out 0.2s ease forwards; }
 
-/* ═══════════════════ UTILITIES ═══════════════════ */
+
 .text-accent { color: var(--accent); }
 .text-green  { color: var(--green); }
 .text-red    { color: var(--red); }
 
-/* Sleek Slider Controls */
+
 .sleek-slider {
   -webkit-appearance: none;
   width: 70%;
@@ -796,7 +794,7 @@ html, body {
   box-shadow: none;
 }
 
-/* ─── Stream Layout System (Camera & Screen Share) ─── */
+
 .stream-layout {
   display: flex;
   flex: 1;
@@ -893,7 +891,7 @@ html, body {
   color: var(--text-primary);
 }
 
-/* Adjust Empty State when inside Stream Viewport */
+
 .stream-viewport .empty-state {
   position: relative;
   top: auto;

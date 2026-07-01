@@ -1,8 +1,14 @@
-// ═══════════════════════════════════════════════════════════
-// Silo Discovery Service
-// Broadcasts SILO_DISCOVER on the LAN and collects SILO_HELLO
-// responses from Android devices running Silo Mobile.
-// ═══════════════════════════════════════════════════════════
+/**
+ * File: discovery.js
+ * Purpose: DiscoveryService class for finding Silo devices on the local network using UDP broadcasts.
+ * Functions:
+ * - start(), stop(): Lifecycle methods.
+ * - forgetDevice(ip), getDevices(): Device state management.
+ * - _getDesktopName(), _getLocalIP(), _getPreferredInterface(): Network adapters enumeration.
+ * - _scheduleBroadcast(), _broadcast(), _getBroadcastAddresses(): Broadcast loop logic.
+ * - _handleMessage(buf, rinfo): Parses incoming UDP messages.
+ * - markConnected(ip, sessionId), markDisconnected(ip): State toggles.
+ */
 
 const dgram = require('dgram');
 const os    = require('os');
@@ -22,27 +28,21 @@ class DiscoveryService extends EventEmitter {
     this.timer        = null;
     this.autoStopTimer = null;
     this.running      = false;
-    this.knownDevices = new Map(); // ip → device info
+    this.knownDevices = new Map(); 
   }
 
-  // ── Public API ─────────────────────────────────────────────
-
   start() {
-    // If already running just re-broadcast immediately (no duplicate cards)
     if (this.running) {
       this._broadcast();
       return;
     }
-
-    // Clean up any leftover socket from a previous auto-stopped session
+    
     if (this.socket) {
       try { this.socket.close(); } catch (_) {}
       this.socket = null;
     }
 
     this.running = true;
-    // NOTE: Do NOT clear knownDevices here — devices already shown in UI
-    // would be re-emitted as 'device-found' and create duplicate cards.
 
     this.socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
 
@@ -65,10 +65,9 @@ class DiscoveryService extends EventEmitter {
       console.log(`[Discovery] Listening on port ${PORTS.DISCOVERY}`);
     });
 
-    // Auto-stop after 30 seconds
     this.autoStopTimer = setTimeout(() => {
       if (!this.running) return;
-      // Stop broadcasting AND close socket so next start() can rebind cleanly
+      
       if (this.timer) { clearInterval(this.timer); this.timer = null; }
       this.running = false;
       if (this.socket) {
@@ -92,11 +91,9 @@ class DiscoveryService extends EventEmitter {
       this.socket = null;
     }
 
-    // Don't clear knownDevices — they remain visible in the UI as 'previously seen'
     console.log('[Discovery] Stopped');
   }
 
-  /** Remove all knowledge of a specific device (e.g. user manually forgets it). */
   forgetDevice(ip) {
     this.knownDevices.delete(ip);
   }
@@ -104,8 +101,6 @@ class DiscoveryService extends EventEmitter {
   getDevices() {
     return Array.from(this.knownDevices.values());
   }
-
-  // ── Private ────────────────────────────────────────────────
 
   _getDesktopName() {
     return os.hostname();
@@ -115,15 +110,9 @@ class DiscoveryService extends EventEmitter {
     return this._getPreferredInterface()?.address ?? '127.0.0.1';
   }
 
-  /**
-   * Returns the best non-virtual IPv4 interface.
-   * Priority: interface whose subnet contains the default gateway (i.e. a real LAN adapter).
-   * Virtual adapters (VirtualBox 192.168.56.x, WSL 172.x, Hyper-V 172.x) are skipped.
-   */
   _getPreferredInterface() {
     const interfaces = os.networkInterfaces();
 
-    // Names/descriptions that indicate virtual/tunnel adapters to skip
     const virtualKeywords = ['virtualbox', 'vbox', 'vmware', 'vethernet', 'wsl',
                               'hyper-v', 'loopback', 'bluetooth', 'pseudo'];
 
@@ -135,18 +124,17 @@ class DiscoveryService extends EventEmitter {
       for (const entry of iface) {
         if (entry.family !== 'IPv4' || entry.internal) continue;
 
-        // Skip VirtualBox host-only range (192.168.56.x) and WSL/Hyper-V ranges (172.x)
         const firstOctet  = parseInt(entry.address.split('.')[0]);
         const secondOctet = parseInt(entry.address.split('.')[1]);
-        if (entry.address.startsWith('192.168.56.')) continue;  // VirtualBox host-only
-        if (firstOctet === 172 && secondOctet >= 16 && secondOctet <= 31) continue; // RFC 1918 WSL range
+        if (entry.address.startsWith('192.168.56.')) continue;  
+        if (firstOctet === 172 && secondOctet >= 16 && secondOctet <= 31) continue; 
 
         candidates.push({ name, ...entry });
       }
     }
 
     if (candidates.length === 0) {
-      // Fall back: return any non-internal IPv4
+      
       for (const iface of Object.values(interfaces)) {
         for (const entry of iface) {
           if (entry.family === 'IPv4' && !entry.internal) return entry;
@@ -155,7 +143,6 @@ class DiscoveryService extends EventEmitter {
       return null;
     }
 
-    // Prefer Wi-Fi or Ethernet by name hint
     const preferred = candidates.find(c =>
       c.name.toLowerCase().includes('wi-fi') ||
       c.name.toLowerCase().includes('wifi')  ||
@@ -166,7 +153,7 @@ class DiscoveryService extends EventEmitter {
   }
 
   _scheduleBroadcast() {
-    // Fire immediately, then repeat
+    
     this._broadcast();
     this.timer = setInterval(() => this._broadcast(), DISCOVERY_INTERVAL_MS);
   }
@@ -177,7 +164,6 @@ class DiscoveryService extends EventEmitter {
     const ip  = this._getLocalIP();
     const msg = Buffer.from(buildDiscover(this._getDesktopName(), ip));
 
-    // Try all broadcast addresses
     const targets = this._getBroadcastAddresses();
     targets.push('255.255.255.255');
 
@@ -200,7 +186,7 @@ class DiscoveryService extends EventEmitter {
         console.log(`[Discovery] Broadcasting on ${iface.name} (${iface.address}) → ${bcast}`);
       } catch (_) {}
     }
-    // Always also try limited broadcast as fallback
+    
     if (!addrs.includes('255.255.255.255')) addrs.push('255.255.255.255');
     return addrs;
   }
@@ -218,7 +204,7 @@ class DiscoveryService extends EventEmitter {
         name:        deviceName,
         ip:          deviceIP,
         port:        androidPort,
-        lastSeen:    Date.now(),   // non-null = seen alive in this scan session
+        lastSeen:    Date.now(),   
         connected:   false,
         sessionId:   null,
       };

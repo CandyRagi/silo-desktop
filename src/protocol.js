@@ -1,38 +1,38 @@
-// ═══════════════════════════════════════════════════════════
-// Silo Protocol — shared constants and message helpers
-// ═══════════════════════════════════════════════════════════
+/**
+ * File: protocol.js
+ * Purpose: Defines Silo protocol constants, UDP message builders, and parsers.
+ * Functions:
+ * - buildDiscover, buildHello, buildPairReq, buildTransferStart, etc.: Message builder functions.
+ * - parseMessage, parseChunkPacket, parseAckNack: Message parsing functions.
+ */
 
 const PORTS = {
-  DISCOVERY: 41234,   // Both sides listen for broadcast on this port
-  DESKTOP:   41235,   // Desktop transfer + pairing listener
-  ANDROID:   41236,   // Android transfer + pairing listener (convention)
+  DISCOVERY: 41234,   
+  DESKTOP:   41235,   
+  ANDROID:   41236,   
 };
 
 const MSG = {
-  // Discovery
-  DISCOVER:   'SILO_DISCOVER',   // Desktop → broadcast
-  HELLO:      'SILO_HELLO',      // Android → desktop (unicast reply)
+  
+  DISCOVER:   'SILO_DISCOVER',   
+  HELLO:      'SILO_HELLO',      
 
-  // Pairing
-  PAIR_REQ:   'SILO_PAIR_REQ',   // Desktop → Android  (with PIN)
-  PAIR_ACK:   'SILO_PAIR_ACK',   // Android → Desktop  (accepted)
-  PAIR_DENY:  'SILO_PAIR_DENY',  // Android → Desktop  (rejected / wrong PIN)
+  PAIR_REQ:   'SILO_PAIR_REQ',   
+  PAIR_ACK:   'SILO_PAIR_ACK',   
+  PAIR_DENY:  'SILO_PAIR_DENY',  
 
-  // Transfer control
-  TRANSFER_START: 'SILO_XFER_START',  // Sender announces file metadata
-  TRANSFER_ACK:   'SILO_XFER_ACK',   // Receiver confirms ready
-  CHUNK:          'SILO_CHUNK',       // File chunk
-  ACK:            'SILO_ACK',         // Chunk acknowledged
-  NACK:           'SILO_NACK',        // Chunk missing, please resend
-  DONE:           'SILO_DONE',        // Transfer complete
-  CANCEL:         'SILO_CANCEL',      // Abort transfer
+  TRANSFER_START: 'SILO_XFER_START',  
+  TRANSFER_ACK:   'SILO_XFER_ACK',   
+  CHUNK:          'SILO_CHUNK',       
+  ACK:            'SILO_ACK',         
+  NACK:           'SILO_NACK',        
+  DONE:           'SILO_DONE',        
+  CANCEL:         'SILO_CANCEL',      
 
-  // Session
   PING:       'SILO_PING',
   PONG:       'SILO_PONG',
   DISCONNECT: 'SILO_DISCONNECT',
 
-  // Mouse Control
   MOUSE_MOVE: 'SILO_MOUSE_MOVE',
   MOUSE_CLICK: 'SILO_MOUSE_CLICK',
   KEYBOARD_INPUT: 'SILO_KEYBOARD_INPUT',
@@ -41,14 +41,12 @@ const MSG = {
   SCREEN_FRAME: 'SILO_SCREEN_FRAME',
 };
 
-const CHUNK_SIZE = 60 * 1024;       // 60 KB data per chunk
-const WINDOW_SIZE = 8;              // Chunks in flight simultaneously
-const ACK_TIMEOUT_MS = 2000;        // ms before retransmit
+const CHUNK_SIZE = 60 * 1024;       
+const WINDOW_SIZE = 8;              
+const ACK_TIMEOUT_MS = 2000;        
 const MAX_RETRIES = 5;
 const DISCOVERY_INTERVAL_MS = 2000;
-const SESSION_TIMEOUT_MS = 6000;   // Disconnect if no ping for this long
-
-// ─── Message Builders ───────────────────────────────────────
+const SESSION_TIMEOUT_MS = 6000;   
 
 function buildDiscover(desktopName, desktopIP) {
   return `${MSG.DISCOVER}|${desktopName}|${desktopIP}|${PORTS.DESKTOP}`;
@@ -102,12 +100,6 @@ function buildDisconnect(sessionId) {
   return `${MSG.DISCONNECT}|${sessionId}`;
 }
 
-// ─── Message Parsers ───────────────────────────────────────
-
-/**
- * Parse an incoming Silo protocol message from a UDP datagram.
- * Returns { type, ...fields } or null if unrecognized.
- */
 function parseMessage(data) {
   try {
     const str = data.toString('utf8');
@@ -179,20 +171,12 @@ function parseMessage(data) {
   }
 }
 
-/**
- * Build a binary CHUNK packet:
- * Header: "SILO_CHUNK|<sessionId>|<fileId>|<chunkIndex>|<totalChunks>|\n"
- * followed by raw binary data.
- */
 function buildChunkPacket(sessionId, fileId, chunkIndex, totalChunks, chunkData) {
   const header = `${MSG.CHUNK}|${sessionId}|${fileId}|${chunkIndex}|${totalChunks}|\n`;
   const headerBuf = Buffer.from(header, 'utf8');
   return Buffer.concat([headerBuf, chunkData]);
 }
 
-/**
- * Parse a binary CHUNK packet. Returns { sessionId, fileId, chunkIndex, totalChunks, data } or null.
- */
 function parseChunkPacket(buf) {
   try {
     const newlineIdx = buf.indexOf('\n');
@@ -214,9 +198,6 @@ function parseChunkPacket(buf) {
   }
 }
 
-/**
- * Build an ACK/NACK text message for a specific chunk.
- */
 function buildChunkAck(sessionId, fileId, chunkIndex) {
   return `${MSG.ACK}|${sessionId}|${fileId}|${chunkIndex}`;
 }

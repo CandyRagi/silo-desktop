@@ -1,16 +1,14 @@
 /**
- * Silo UDP Diagnostic Tool
- * Run with: node diagnose.js
- *
- * This listens on port 41234 and logs EVERY packet received,
- * and also sends a test broadcast every 2s so we can confirm
- * the desktop side is working independently of Electron.
+ * File: diagnose.js
+ * Purpose: Standalone CLI tool to diagnose UDP broadcast and discovery issues.
+ * Functions:
+ * - getAllInterfaces(): Lists all IPv4 network interfaces on the machine.
+ * - sendBroadcast(): Broadcasts a test SILO_DISCOVER packet to verify network reachability.
  */
 
 const dgram = require('dgram');
 const os    = require('os');
 
-// ── Get all IPv4 interfaces ──────────────────────────────
 function getAllInterfaces() {
   const result = [];
   const ifaces = os.networkInterfaces();
@@ -37,7 +35,6 @@ ifaces.forEach(i => {
   console.log(`  ${i.name.padEnd(40)} ${i.ip.padEnd(16)} bcast→${i.broadcast} ${tag}`);
 });
 
-// ── Pick non-virtual Wi-Fi / Ethernet interface ──────────
 const virtualKeywords = ['virtualbox','vbox','vmware','vethernet','wsl','hyper-v','bluetooth'];
 const real = ifaces.filter(i =>
   !i.internal &&
@@ -54,7 +51,6 @@ if (chosen) {
   console.log('  ⚠ None found — check your Wi-Fi connection');
 }
 
-// ── UDP Socket ───────────────────────────────────────────
 const PORT = 41234;
 const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
 
@@ -71,7 +67,6 @@ socket.on('message', (msg, rinfo) => {
   console.log(`\n📥 RECEIVED from ${rinfo.address}:${rinfo.port}`);
   console.log(`   "${text.substring(0, 120)}"`);
 
-  // If it's a HELLO, that means the Android found us
   if (text.startsWith('SILO_HELLO')) {
     const parts = text.split('|');
     console.log(`\n🎉 ANDROID FOUND!`);
@@ -88,11 +83,11 @@ socket.bind(PORT, () => {
   let count = 0;
   function sendBroadcast() {
     const msg = Buffer.from(`SILO_DISCOVER|${os.hostname()}|${chosen.ip}|41235`);
-    // Send to subnet broadcast
+    
     socket.send(msg, 0, msg.length, PORT, chosen.broadcast, err => {
       if (err) console.warn(`  ✕ Broadcast to ${chosen.broadcast} failed:`, err.message);
     });
-    // Also send to limited broadcast
+    
     socket.send(msg, 0, msg.length, PORT, '255.255.255.255', err => {
       if (err) console.warn(`  ✕ Broadcast to 255.255.255.255 failed:`, err.message);
     });

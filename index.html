@@ -1,3 +1,6 @@
+<!-- File: index.html
+Purpose: Defines the structure and layout of the main app window. -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,7 +15,7 @@
 </head>
 <body>
 
-<!-- ══════════════════ CUSTOM TITLE BAR ══════════════════ -->
+
 <div id="titlebar" class="titlebar">
   <div class="titlebar-drag">
     <div class="titlebar-logo">
@@ -26,10 +29,10 @@
   </div>
 </div>
 
-<!-- ══════════════════ APP SHELL ══════════════════ -->
+
 <div class="app-shell">
 
-  <!-- ── SIDEBAR ── -->
+  
   <aside class="sidebar">
     <div class="sidebar-top">
       <div class="device-identity">
@@ -89,10 +92,10 @@
     </div>
   </aside>
 
-  <!-- ── MAIN CONTENT ── -->
+  
   <main class="content">
 
-    <!-- ═══ DEVICES TAB ═══ -->
+    
     <section class="tab active" id="tab-devices">
       <div class="tab-header" style="display:flex; justify-content:space-between; align-items:center;">
         <div>
@@ -120,7 +123,7 @@
       <div id="devices-grid" class="devices-grid" style="display:none"></div>
     </section>
 
-    <!-- ═══ TRANSFERS TAB ═══ -->
+    
     <section class="tab" id="tab-transfers">
       <div class="tab-header">
         <div>
@@ -139,7 +142,7 @@
       <div id="transfers-list" class="transfers-list"></div>
     </section>
 
-    <!-- ═══ CAMERA TAB ═══ -->
+    
     <section class="tab" id="tab-camera">
 
 
@@ -151,7 +154,7 @@
       </div>
 
       <div class="stream-layout">
-        <!-- Viewport -->
+        
         <div class="stream-viewport">
           <div id="camera-placeholder" class="empty-state">
             <div class="empty-icon">
@@ -166,7 +169,7 @@
           <img id="camera-feed" class="stream-img" />
         </div>
 
-        <!-- Sidebar -->
+        
         <div class="stream-sidebar">
           <div class="sidebar-card">
             <div class="sidebar-card-title">Device Info</div>
@@ -227,7 +230,7 @@
       </div>
     </section>
 
-    <!-- ═══ SCREEN SHARE TAB ═══ -->
+    
     <section class="tab" id="tab-screen">
       <div class="tab-header">
         <div>
@@ -237,7 +240,7 @@
       </div>
 
       <div class="stream-layout">
-        <!-- Viewport -->
+        
         <div class="stream-viewport">
           <div id="screen-placeholder" class="empty-state">
             <div class="empty-icon">
@@ -253,7 +256,7 @@
           <img id="screen-feed" class="stream-img" />
         </div>
 
-        <!-- Sidebar -->
+        
         <div class="stream-sidebar">
           <div class="sidebar-card">
             <div class="sidebar-card-title">Stream Status</div>
@@ -306,7 +309,7 @@
 
 
 
-    <!-- ═══ HISTORY TAB ═══ -->
+    
     <section class="tab" id="tab-history">
       <div class="tab-header">
         <div>
@@ -327,7 +330,7 @@
       <div id="history-list" class="history-list" style="display:none"></div>
     </section>
 
-    <!-- ═══ SETTINGS TAB ═══ -->
+    
     <section class="tab" id="tab-settings">
       <div class="tab-header">
         <div>
@@ -393,7 +396,7 @@
   </main>
 </div>
 
-<!-- ══════════════════ PIN PAIRING MODAL ══════════════════ -->
+
 <div id="modal-overlay" class="modal-overlay" style="display:none" onclick="closePairModal()">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-header">
@@ -415,7 +418,7 @@
       </div>
     </div>
     <p class="modal-desc">Please accept the connection request on your phone.</p>
-    <!-- Waiting state -->
+    
     <div class="modal-waiting" id="modal-waiting">
       <span class="spinner"></span>
       <span id="pair-btn-text">Waiting for phone…</span>
@@ -427,7 +430,7 @@
   </div>
 </div>
 
-<!-- ══════════════════ NOTIFICATION TOAST ══════════════════ -->
+
 <div id="toast-container" class="toast-container"></div>
 
 <script src="renderer.js"></script>
