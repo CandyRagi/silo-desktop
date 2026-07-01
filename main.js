@@ -2,7 +2,7 @@
 // Silo Desktop — Electron Main Process
 // ═══════════════════════════════════════════════════════════
 
-const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu } = require('electron');
 const path = require('node:path');
 const fs = require('fs');
 const os = require('os');
@@ -15,6 +15,8 @@ const { mouse, left, right, Point, keyboard, Key } = require('@nut-tree-fork/nut
 let mainWindow    = null;
 let discovery     = null;
 let transferMgr   = null;
+let tray          = null;
+let isQuitting    = false;
 
 // ── History Management ─────────────────────────────────────
 const historyPath = path.join(app.getPath('userData'), 'history.json');
@@ -68,7 +70,45 @@ function createWindow() {
 
   mainWindow.loadFile('index.html');
 
+  mainWindow.on('close', (event) => {
+    if (!isQuitting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
+  });
+
   mainWindow.on('closed', () => { mainWindow = null; });
+}
+
+function createTray() {
+  const trayIcon = process.platform === 'win32' ? path.join(__dirname, 'icon.ico') : path.join(__dirname, 'icon.png');
+  tray = new Tray(trayIcon);
+  
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Open Silo',
+      click: () => {
+        mainWindow?.show();
+        mainWindow?.focus();
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      click: () => {
+        isQuitting = true;
+        app.quit();
+      }
+    }
+  ]);
+  
+  tray.setToolTip('Silo');
+  tray.setContextMenu(contextMenu);
+  
+  tray.on('double-click', () => {
+    mainWindow?.show();
+    mainWindow?.focus();
+  });
 }
 
 // ── Services ───────────────────────────────────────────────
@@ -361,12 +401,21 @@ function registerIPC() {
 
 app.whenReady().then(() => {
   createWindow();
+  createTray();
   initServices();
   registerIPC();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    } else {
+      mainWindow?.show();
+    }
   });
+});
+
+app.on('before-quit', () => {
+  isQuitting = true;
 });
 
 app.on('window-all-closed', () => {
