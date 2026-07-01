@@ -15,6 +15,12 @@
  * - switchTab(name), toast(msg, type, onClick), escHtml(str), formatBytes(bytes), formatTime(ts), fileEmoji(name), updateCameraFilters(): Helpers.
  */
 
+(function setupWindowControls() {
+  document.getElementById('btn-minimize').addEventListener('click', function() { window.siloAPI.minimize(); });
+  document.getElementById('btn-maximize').addEventListener('click', function() { window.siloAPI.maximize(); });
+  document.getElementById('btn-close').addEventListener('click', function() { window.siloAPI.close(); });
+})();
+
 const SAVED_DEVICES_KEY = 'silo_saved_devices';
 
 function loadSavedDevices() {
@@ -336,8 +342,6 @@ function registerAPIListeners() {
     }
   });
 
-  window.siloAPI.onHistoryUpdate((history) => {
-  });
 }
 
 function addOrUpdateDevice(device) {

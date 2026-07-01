@@ -69,10 +69,9 @@ html, body {
   align-items: center;
   justify-content: space-between;
   z-index: 1000;
-  -webkit-app-region: drag;
 }
 
-.titlebar-drag { flex: 1; display: flex; align-items: center; padding: 0 14px; }
+.titlebar-drag { flex: 1; display: flex; align-items: center; padding: 0 14px; -webkit-app-region: drag; }
 .titlebar-logo {
   display: flex; align-items: center; gap: 8px;
   font-weight: 700; font-size: 14px; letter-spacing: -0.02em;
@@ -80,7 +79,7 @@ html, body {
 }
 
 .mac-controls { display: flex; align-items: center; gap: 8px; padding: 0 14px; -webkit-app-region: no-drag; }
-.mac-btn { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); padding: 0; cursor: pointer; transition: filter 0.2s; outline: none; }
+.mac-btn { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); padding: 0; cursor: pointer; transition: filter 0.2s; outline: none; -webkit-app-region: no-drag; }
 .mac-btn:hover { filter: brightness(0.8); }
 .mac-close { background-color: #ff5f56; }
 .mac-min { background-color: #ffbd2e; }

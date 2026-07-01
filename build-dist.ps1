@@ -98,13 +98,21 @@ Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host "You can now open 'Silo' from your Desktop or Start Menu." -ForegroundColor Yellow
 "@
 
-$installerScript | Out-File -FilePath "$distDir/install.ps1" -Encoding utf8
-Copy-Item "$appDir/uninstall.ps1" $distDir
+Set-Location $distDir
+
+$installerScript | Out-File -FilePath "install.ps1" -Encoding utf8
+Copy-Item "$appDir/uninstall.ps1" .
+
+Write-Host "[+] Generating CMD wrappers to bypass Execution Policy..." -ForegroundColor Green
+$cmdInstall = "@echo off`r`ncd /d `"%~dp0`"`r`npowershell -ExecutionPolicy Bypass -File .\install.ps1`r`npause"
+$cmdInstall | Out-File -FilePath "install.cmd" -Encoding ascii
+
+$cmdUninstall = "@echo off`r`ncd /d `"%~dp0`"`r`npowershell -ExecutionPolicy Bypass -File .\uninstall.ps1`r`npause"
+$cmdUninstall | Out-File -FilePath "uninstall.cmd" -Encoding ascii
 
 # 7. Zip the package
 Write-Host "[+] Packaging setup into ZIP archive..." -ForegroundColor Green
-Set-Location $distDir
-Compress-Archive -Path "Silo", "install.ps1", "uninstall.ps1" -DestinationPath "$distDir/Silo-Windows-Setup.zip" -Force
+Compress-Archive -Path "Silo", "install.ps1", "uninstall.ps1", "install.cmd", "uninstall.cmd" -DestinationPath "Silo-Windows-Setup.zip" -Force
 
 Write-Host ""
 Write-Host "=============================================" -ForegroundColor Cyan
@@ -112,4 +120,4 @@ Write-Host "   PACKAGING COMPLETE SUCCESSFULLY!          " -ForegroundColor Gree
 Write-Host "=============================================" -ForegroundColor Cyan
 Write-Host "Packaged Standalone: $buildDir" -ForegroundColor Yellow
 Write-Host "Installer ZIP: $distDir/Silo-Windows-Setup.zip" -ForegroundColor Yellow
-Write-Host "To install, extract the ZIP and run 'install.ps1' with PowerShell." -ForegroundColor Yellow
+Write-Host "To install, extract the ZIP and double-click 'install.cmd'." -ForegroundColor Yellow

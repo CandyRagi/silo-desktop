@@ -11,16 +11,36 @@ Silo is a high-performance local network file sharing and remote control utility
 
 ## Installation
 
-You can download the latest installer and read the full documentation on our official website.
+### Method 1: Installer Package (Recommended)
 
-**[Download Silo Desktop](https://candyragi.github.io/silo-website)**
+1. Navigate to the official website: [Download Silo](https://candyragi.github.io/silo-website)
+2. Download the latest `Silo-Windows-Setup.zip` release.
+3. Extract the downloaded ZIP archive.
+4. Double-click the `install.cmd` script. This script automatically handles execution policies and installs the application to your local application data directory.
+5. Once the installation completes, launch Silo from the newly created Desktop or Start Menu shortcuts.
 
-## Setup
+### Method 2: Manual Build from Source
 
-1. Install and run Silo Desktop on your Windows machine.
+For developers who wish to build the application locally:
+
+1. Clone this repository to your local machine.
+2. Ensure Node.js is installed.
+3. Open a terminal in the project directory and run `npm install` to download dependencies.
+4. Run `npm start` to launch the application in development mode.
+5. To package the application into a standalone installer, execute the `build-dist.ps1` script via PowerShell.
+
+## Setup Instructions
+
+1. Ensure Silo Desktop is running on your Windows machine and allowed through your Windows Firewall if prompted.
 2. Install the Silo companion app on your Android device.
-3. Ensure both devices are connected to the same local network.
-4. Open the Silo Android app, scan for available devices, and select your desktop to connect.
+3. Connect both devices to the same local area network.
+4. Open the Silo Android application, tap to scan for available devices, and select your desktop to establish a connection.
+5. Accept the pairing request on the desktop application to finalize the connection.
+
+## System Requirements
+
+- Operating System: Windows 10 or later
+- Network: Local Area Network connection (Wi-Fi or Ethernet)
 
 ## License
 
